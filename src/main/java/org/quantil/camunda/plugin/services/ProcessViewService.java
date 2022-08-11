@@ -13,7 +13,10 @@ package org.quantil.camunda.plugin.services;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +42,10 @@ public class ProcessViewService {
         // retrieve the ID of the deployment the given process instance belongs to
         String deploymentId = getDeploymentIdForProcessInstanceId(URL, processInstanceId);
         System.out.println("Process instance belongs to deployment with ID: " + deploymentId);
+
+        // retrieve resources for deployment
+        List<String> resources = getResourcesForDeployment(URL, deploymentId);
+        System.out.println("Retrieved list with " + deploymentId + " resources for the deployment!");
 
         // TODO
         return "original-workflow";
@@ -97,5 +104,34 @@ public class ProcessViewService {
         System.out.println("Retrieving deployment ID: " + deploymentId);
 
         return deploymentId;
+    }
+
+    /**
+     * Retrieve the names of all resources contained in the given deployment
+     *
+     * @param URL the URL to access the Camunda REST API
+     * @param deploymentId the ID of the deployment to retrieve the resources for
+     * @return the list with names of contained resources
+     */
+    private List<String> getResourcesForDeployment(String URL, String deploymentId) throws IOException {
+        List<String> resourcesList = new ArrayList();
+
+        // create URL to deployment endpoint
+        String deploymentUrl = URL + "/" + ENGINE_REST_SUFFIX + "/deployment/" + deploymentId + "/resources";
+        System.out.println("Retrieving resources for deployment from URL: " + deploymentUrl);
+
+        // request all resources for the given deployment
+        java.net.URL url = new URL(deploymentUrl);
+        HttpURLConnection http = (HttpURLConnection) url.openConnection();
+        http.setRequestProperty("Accept", "application/json");
+
+        // extract resources from response object
+        JsonNode deploymentNode = new ObjectMapper().readTree(http.getInputStream());
+        http.disconnect();
+
+        // TODO: parse to list with resources
+        System.out.println(deploymentNode.toPrettyString());
+
+        return resourcesList;
     }
 }
