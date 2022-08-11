@@ -18,13 +18,13 @@ function ProcessViewButton({camundaAPI, processInstanceId}) {
 
     const cockpitApi = camundaAPI.cockpitApi;
     const engine = camundaAPI.engine;
-    const activeProcessViewEndpoint = `${cockpitApi}/plugin/camunda-process-views-plugin/${engine}/process-instance/${processInstanceId}`
-    console.log('URL to server-side plugin: ', activeProcessViewEndpoint);
+    const processViewEndpoint = `${cockpitApi}/plugin/camunda-process-views-plugin/${engine}/process-instance/${processInstanceId}`
+    console.log('URL to server-side plugin: ', processViewEndpoint);
 
     // get the currently active view by retrieving the corresponding variable of the process instance
     useEffect(() => {
         fetch(
-            activeProcessViewEndpoint,
+            processViewEndpoint + '/active-view',
             {
                 headers: {
                     'Accept': 'application/json'
@@ -41,14 +41,28 @@ function ProcessViewButton({camundaAPI, processInstanceId}) {
         });
     }, []);
 
-    function openDialog(activatedView){
-            console.log('Opening dialog with currently activated view: ', activatedView);
+    async function openDialog(activatedView){
+            console.log('Switching from currently activated view: ', activatedView);
+
+            // switch to next view for the process instance
+            console.log('Performing POST request at following URL to switch view: ', processViewEndpoint + '/change-view');
+            const rawResponse = await fetch(processViewEndpoint + '/change-view',
+                {method: 'POST', body: '{}',
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+                }});
+            console.log('Switching to next view resulted in: ', rawResponse);
+            location.reload();
     }
 
     return (
-        <button className="btn btn-default btn-toolbar ng-scope process-view-button" title="Change Process View to Visualize" onClick={() => openDialog(activatedView)} tooltip-placement="left">
-            <img class="process-view-button-picture" src="https://icon-library.com/images/view-icon/view-icon-12.jpg" />
-        </button>
+        <>
+            <button className="btn btn-default btn-toolbar ng-scope process-view-button" title="Change Process View to Visualize" onClick={() => openDialog(activatedView)} tooltip-placement="left">
+                <img class="process-view-button-picture" src="https://icon-library.com/images/view-icon/view-icon-12.jpg" />
+            </button>
+        </>
     );
 }
 
