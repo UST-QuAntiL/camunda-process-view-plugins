@@ -1,1 +1,0 @@
-# Client side assets of the camunda-process-views-plugin

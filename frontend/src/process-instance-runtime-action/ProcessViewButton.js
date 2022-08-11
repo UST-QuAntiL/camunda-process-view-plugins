@@ -11,6 +11,8 @@
 
 import React, {useEffect, useState} from "react";
 
+import "./process-view-button.scss"
+
 function ProcessViewButton({camundaAPI, processInstanceId}) {
     const [activatedView, setActivatedView] = useState();
 
@@ -28,25 +30,25 @@ function ProcessViewButton({camundaAPI, processInstanceId}) {
                     'Accept': 'application/json'
                 }
             }
-        )
-            .then(async res => {
+        ).then(async res => {
 
-                // retrieve value from response
-                let response = await res.json();
-                console.log(response)
-                setActivatedView(response);
-                console.log('Currently activated view: ', activatedView)
-            })
-            .catch(err => {
-                console.error(err);
-            });
+            // retrieve value from response
+            let response = await res.json();
+            setActivatedView(response['activeProcessView']);
+            console.log('Currently activated view: ', response['activeProcessView'])
+        }).catch(err => {
+            console.error(err);
+        });
     }, []);
 
+    function openDialog(activatedView){
+            console.log('Opening dialog with currently activated view: ', activatedView);
+    }
 
     return (
-        <>
-            <div>Hello World!</div>
-        </>
+        <button className="btn btn-default btn-toolbar ng-scope" title="Change Process View to Visualize" onClick={() => openDialog(activatedView)} tooltip-placement="left">
+            <img src="./process-view-button.png" />
+        </button>
     );
 }
 
