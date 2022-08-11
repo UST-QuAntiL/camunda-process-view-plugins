@@ -1,37 +1,34 @@
 /*
- * Copyright Camunda Services GmbH and/or licensed to Camunda Services GmbH
- * under one or more contributor license agreements. See the NOTICE file
- * distributed with this work for additional information regarding copyright
- * ownership. Camunda licenses this file to you under the Apache License,
- * Version 2.0; you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * Copyright (c) 2022 Institute of Architecture of Application Systems -
+ * University of Stuttgart
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * This program and the accompanying materials are made available under the
+ * terms the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * SPDX-License-Identifier: Apache-2.0
  */
 
 import React from "react";
 import ReactDOM from "react-dom";
 
-import ProcessInstanceCount from "./ProcessInstanceCount";
+import ProcessViewButton from "./process-instance-runtime-action/ProcessViewButton";
 
-const plugins = [{
-  id: "process-instance-count",
-  pluginPoint: "cockpit.dashboard",
-  render: (node, {api}) => {
-    ReactDOM.render(
-        <ProcessInstanceCount camundaAPI={api}/>,
-        node
-    );
+const plugins = [
+  {
+    id: "process-instance-view-selection",
+    pluginPoint: "cockpit.processInstance.runtime.action",
+    render: (node, {api, processInstanceId}) => {
+      console.log('Loading plugin to add view selection button!');
+      console.log('Available APIs to retrieve data: ', api);
+      console.log('Plugin loaded for process instance ID: ', processInstanceId);
+      ReactDOM.render(
+          <ProcessViewButton camundaAPI={api} processInstanceId={processInstanceId}/>,
+          node
+      );
+    },
+    priority: 12,
   },
-
-  // make sure we have a higher priority than the default plugin
-  priority: 12,
-}];
+];
 
 export default plugins;

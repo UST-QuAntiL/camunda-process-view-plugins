@@ -11,36 +11,29 @@
 
 package org.quantil.camunda.plugin;
 
-import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import org.quantil.camunda.plugin.resources.ProcessViewPluginRootResource;
 import org.camunda.bpm.cockpit.plugin.spi.impl.AbstractCockpitPlugin;
+import org.quantil.camunda.plugin.resources.ProcessViewPluginRootResource;
 
 /**
  * Main class of the server-side plugin
  */
 public class ProcessViewPlugin extends AbstractCockpitPlugin {
 
-  public static final String ID = "camunda-process-views-plugin";
+    public static final String ID = "camunda-process-views-plugin";
 
-  public String getId() {
-    return ID;
-  }
+    public String getId() {
+        return ID;
+    }
 
-  @Override
-  public Set<Class<?>> getResourceClasses() {
-    Set<Class<?>> classes = new HashSet<Class<?>>();
+    @Override
+    public Set<Class<?>> getResourceClasses() {
+        Set<Class<?>> classes = new HashSet<Class<?>>();
 
-    classes.add(ProcessViewPluginRootResource.class);
+        classes.add(ProcessViewPluginRootResource.class);
 
-    return classes;
-  }
-
-  @Override
-  public List<String> getMappingFiles() {
-    return Arrays.asList("org/quantil/camunda/plugin/queries/sample.xml");
-  }
+        return classes;
+    }
 }
