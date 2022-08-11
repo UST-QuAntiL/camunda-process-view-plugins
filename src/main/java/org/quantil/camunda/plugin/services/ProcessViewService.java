@@ -13,8 +13,10 @@ package org.quantil.camunda.plugin.services;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Service handling all functionality related to retrieving or changing views for process instances
@@ -59,22 +61,41 @@ public class ProcessViewService {
     }
 
     /**
-     * TODO
+     * Get the ID of the deployment the given process instance belongs to
      *
-     * @param URL
-     * @param processInstanceId
-     * @return
+     * @param URL the URL to access the Camunda REST API
+     * @param processInstanceId the process instance ID of the instance to get the ID of the deployment for
+     * @return the ID of the deployment
      */
     private String getDeploymentIdForProcessInstanceId(String URL, String processInstanceId) throws IOException {
+        String processInstanceUrl = URL + "/" + ENGINE_REST_SUFFIX + "/process-instance/" + processInstanceId;
+        System.out.println("Retrieving process instance details from URL: " + processInstanceUrl);
 
-        java.net.URL url = new URL(URL + "/" + ENGINE_REST_SUFFIX + "/process-instance/" + processInstanceId);
-        HttpURLConnection http = (HttpURLConnection)url.openConnection();
+        // request process instance details to get corresponding process definition ID
+        java.net.URL url = new URL(processInstanceUrl);
+        HttpURLConnection http = (HttpURLConnection) url.openConnection();
         http.setRequestProperty("Accept", "application/json");
 
-        System.out.println(http.getResponseCode() + " " + http.getResponseMessage());
+        // extract definition ID from response object
+        JsonNode processInstanceNode = new ObjectMapper().readTree(http.getInputStream());
         http.disconnect();
+        String definitionId = processInstanceNode.get("definitionId").asText();
+        System.out.println("Retrieved corresponding definition ID: " + definitionId);
 
-        // TODO
-        return "TODO";
+        // use process definitions endpoint to retrieve deployment ID
+        String processDefinitionsUrl = URL + "/" + ENGINE_REST_SUFFIX + "/process-definition/" + definitionId;
+        System.out.println("Retrieving process definition details from URL: " + processDefinitionsUrl);
+        url = new URL(processDefinitionsUrl);
+        http = (HttpURLConnection) url.openConnection();
+        http.setRequestProperty("Accept", "application/json");
+
+        // extract deployment ID from response object
+        JsonNode processDefinitionNode = new ObjectMapper().readTree(http.getInputStream());
+        http.disconnect();
+        System.out.println(processDefinitionNode.toPrettyString());
+        String deploymentId = processDefinitionNode.get("deploymentId").asText();
+        System.out.println("Retrieving deployment ID: " + deploymentId);
+
+        return deploymentId;
     }
 }
