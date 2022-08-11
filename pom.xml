@@ -23,7 +23,7 @@
 
     <frontend.working.directory>frontend/</frontend.working.directory>
     <frontend.build.path>${frontend.working.directory}dist/</frontend.build.path>
-    <frontend.target.path>plugin-webapp/sample-plugin/app</frontend.target.path>
+    <frontend.target.path>plugin-webapp/camunda-process-views-plugin/app</frontend.target.path>
 
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
