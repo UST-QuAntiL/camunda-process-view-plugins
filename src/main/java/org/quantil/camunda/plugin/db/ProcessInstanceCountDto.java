@@ -14,26 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.camunda.bpm.cockpit.plugin.sample.resources;
-
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import org.camunda.bpm.cockpit.plugin.resource.AbstractPluginRootResource;
-import org.camunda.bpm.cockpit.plugin.sample.SamplePlugin;
+package org.quantil.camunda.plugin.db;
 
 /**
  *
  * @author nico.rehwaldt
  */
-@Path("plugin/" + SamplePlugin.ID)
-public class SamplePluginRootResource extends AbstractPluginRootResource {
+public class ProcessInstanceCountDto {
 
-  public SamplePluginRootResource() {
-    super(SamplePlugin.ID);
+  private String key;
+
+  private int instanceCount;
+
+  public String getKey() {
+    return key;
   }
 
-  @Path("{engineName}/process-instance")
-  public ProcessInstanceResource getProcessInstanceResource(@PathParam("engineName") String engineName) {
-    return subResource(new ProcessInstanceResource(engineName), engineName);
+  public void setKey(String key) {
+    this.key = key;
+  }
+
+  public int getInstanceCount() {
+    return instanceCount;
+  }
+
+  public void setInstanceCount(int instanceCount) {
+    this.instanceCount = instanceCount;
   }
 }

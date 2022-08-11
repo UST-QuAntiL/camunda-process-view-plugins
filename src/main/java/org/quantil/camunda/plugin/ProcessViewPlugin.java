@@ -14,31 +14,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.camunda.bpm.cockpit.plugin.sample.db;
+package org.quantil.camunda.plugin;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.quantil.camunda.plugin.resources.SamplePluginRootResource;
+import org.camunda.bpm.cockpit.plugin.spi.impl.AbstractCockpitPlugin;
 
 /**
  *
  * @author nico.rehwaldt
  */
-public class ProcessInstanceCountDto {
+public class ProcessViewPlugin extends AbstractCockpitPlugin {
 
-  private String key;
+  public static final String ID = "sample-plugin";
 
-  private int instanceCount;
-
-  public String getKey() {
-    return key;
+  public String getId() {
+    return ID;
   }
 
-  public void setKey(String key) {
-    this.key = key;
+  @Override
+  public Set<Class<?>> getResourceClasses() {
+    Set<Class<?>> classes = new HashSet<Class<?>>();
+
+    classes.add(SamplePluginRootResource.class);
+
+    return classes;
   }
 
-  public int getInstanceCount() {
-    return instanceCount;
-  }
-
-  public void setInstanceCount(int instanceCount) {
-    this.instanceCount = instanceCount;
+  @Override
+  public List<String> getMappingFiles() {
+    return Arrays.asList("org/quantil/camunda/plugin/queries/sample.xml");
   }
 }

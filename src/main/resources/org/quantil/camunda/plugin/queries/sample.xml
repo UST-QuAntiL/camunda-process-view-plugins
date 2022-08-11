@@ -4,7 +4,7 @@
 
 <mapper namespace="cockpit.sample">
 
-  <resultMap id="processInstanceCountMap" type="org.camunda.bpm.cockpit.plugin.sample.db.ProcessInstanceCountDto">
+  <resultMap id="processInstanceCountMap" type="org.quantil.camunda.plugin.db.ProcessInstanceCountDto">
     <result property="key" column="KEY_" jdbcType="VARCHAR" />
     <result property="instanceCount" column="INSTANCES_" jdbcType="INTEGER" />
   </resultMap>

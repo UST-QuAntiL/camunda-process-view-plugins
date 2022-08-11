@@ -14,31 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.camunda.bpm.cockpit.plugin.sample.resources;
+package org.quantil.camunda.plugin.resources;
 
-import java.util.List;
-import javax.ws.rs.GET;
-
-import org.camunda.bpm.cockpit.db.QueryParameters;
-import org.camunda.bpm.cockpit.plugin.resource.AbstractPluginResource;
-import org.camunda.bpm.cockpit.plugin.sample.db.ProcessInstanceCountDto;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import org.camunda.bpm.cockpit.plugin.resource.AbstractPluginRootResource;
+import org.quantil.camunda.plugin.ProcessViewPlugin;
 
 /**
  *
  * @author nico.rehwaldt
  */
-public class ProcessInstanceResource extends AbstractPluginResource {
+@Path("plugin/" + ProcessViewPlugin.ID)
+public class SamplePluginRootResource extends AbstractPluginRootResource {
 
-  public ProcessInstanceResource(String engineName) {
-    super(engineName);
+  public SamplePluginRootResource() {
+    super(ProcessViewPlugin.ID);
   }
 
-  @GET
-  public List<ProcessInstanceCountDto> getProcessInstanceCounts() {
-    QueryParameters parameters =
-      new QueryParameters();
-    parameters.disableMaxResultsLimit();
-    return getQueryService()
-      .executeQuery("cockpit.sample.selectProcessInstanceCountsByProcessDefinition", parameters);
+  @Path("{engineName}/process-instance")
+  public ProcessInstanceResource getProcessInstanceResource(@PathParam("engineName") String engineName) {
+    return subResource(new ProcessInstanceResource(engineName), engineName);
   }
 }

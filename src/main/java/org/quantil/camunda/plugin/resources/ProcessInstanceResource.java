@@ -14,39 +14,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.camunda.bpm.cockpit.plugin.sample;
+package org.quantil.camunda.plugin.resources;
 
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import javax.ws.rs.GET;
 
-import org.camunda.bpm.cockpit.plugin.sample.resources.SamplePluginRootResource;
-import org.camunda.bpm.cockpit.plugin.spi.impl.AbstractCockpitPlugin;
+import org.camunda.bpm.cockpit.db.QueryParameters;
+import org.camunda.bpm.cockpit.plugin.resource.AbstractPluginResource;
+import org.quantil.camunda.plugin.db.ProcessInstanceCountDto;
 
 /**
  *
  * @author nico.rehwaldt
  */
-public class SamplePlugin extends AbstractCockpitPlugin {
+public class ProcessInstanceResource extends AbstractPluginResource {
 
-  public static final String ID = "sample-plugin";
-
-  public String getId() {
-    return ID;
+  public ProcessInstanceResource(String engineName) {
+    super(engineName);
   }
 
-  @Override
-  public Set<Class<?>> getResourceClasses() {
-    Set<Class<?>> classes = new HashSet<Class<?>>();
-
-    classes.add(SamplePluginRootResource.class);
-
-    return classes;
-  }
-
-  @Override
-  public List<String> getMappingFiles() {
-    return Arrays.asList("org/camunda/bpm/cockpit/plugin/sample/queries/sample.xml");
+  @GET
+  public List<ProcessInstanceCountDto> getProcessInstanceCounts() {
+    QueryParameters parameters =
+      new QueryParameters();
+    parameters.disableMaxResultsLimit();
+    return getQueryService()
+      .executeQuery("cockpit.sample.selectProcessInstanceCountsByProcessDefinition", parameters);
   }
 }
