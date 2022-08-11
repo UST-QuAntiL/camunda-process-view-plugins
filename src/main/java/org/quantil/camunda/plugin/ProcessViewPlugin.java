@@ -25,12 +25,11 @@ import org.quantil.camunda.plugin.resources.SamplePluginRootResource;
 import org.camunda.bpm.cockpit.plugin.spi.impl.AbstractCockpitPlugin;
 
 /**
- *
- * @author nico.rehwaldt
+ * Main class of the server-side plugin
  */
 public class ProcessViewPlugin extends AbstractCockpitPlugin {
 
-  public static final String ID = "sample-plugin";
+  public static final String ID = "camunda-process-views-plugin";
 
   public String getId() {
     return ID;
