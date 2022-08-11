@@ -2,14 +2,14 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.camunda.bpm.cockpit.plugin</groupId>
-  <artifactId>cockpit-sample-plugin</artifactId>
+  <groupId>org.quantil.camunda.plugin</groupId>
+  <artifactId>camunda-process-views-plugin</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
-  <name>Camunda Cockpit Plugin: Sample</name>
-  <description>This is a simple plugin that showcases the plugin system of Cockpit, the process monitoring tool of Camunda Platform.</description>
-  <url>https://github.com/camunda/camunda-bpm-examples/tree/7.17/cockpit/cockpit-sample-plugin</url>
+  <name>Camunda Process View Plugin</name>
+  <description>This is a plugin showcasing how to use process views to monitor and analyze quantum workflows.</description>
+  <url>https://github.com/UST-QuAntiL/camunda-process-views-plugin</url>
 
   <properties>
     <camunda.version>7.17.0</camunda.version>
@@ -44,31 +44,11 @@
       <scope>provided</scope>
       <version>${jboss-javaee.version}</version>
     </dependency>
-    <!-- test dependencies -->
     <dependency>
       <groupId>org.camunda.bpm</groupId>
       <artifactId>camunda-engine</artifactId>
       <version>${camunda.version}</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.h2database</groupId>
-      <artifactId>h2</artifactId>
-      <version>2.0.206</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>${junit.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <!-- redirect slf4j logging to jdk logging -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-jdk14</artifactId>
-      <version>${slf4j.version}</version>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
