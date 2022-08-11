@@ -20,16 +20,18 @@ import ReactDOM from "react-dom";
 
 import ProcessInstanceCount from "./ProcessInstanceCount";
 
-export default {
+const plugins = [{
   id: "process-instance-count",
   pluginPoint: "cockpit.dashboard",
-  render: (node, { api }) => {
+  render: (node, {api}) => {
     ReactDOM.render(
-      <ProcessInstanceCount camundaAPI={ api } />,
+        <ProcessInstanceCount camundaAPI={api}/>,
         node
     );
   },
 
   // make sure we have a higher priority than the default plugin
   priority: 12,
-};
+}];
+
+export default plugins;
