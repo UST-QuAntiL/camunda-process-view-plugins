@@ -74,7 +74,7 @@ public class ProcessViewPluginRootResource extends AbstractPluginRootResource {
   @POST
   @Path("{engineName}/process-instance/{processInstanceId}/change-view")
   public Response switchToNextProcessView(@Context UriInfo uriInfo, @PathParam("engineName") String engineName,
-                                          @PathParam("processInstanceId") String processInstanceId) {
+                                          @PathParam("processInstanceId") String processInstanceId) throws IOException {
     // workaround to access the Camunda REST API, as the Java API does not provide all required details
     String baseUrl = "http://" + uriInfo.getAbsolutePath().getHost() + ":" + uriInfo.getAbsolutePath().getPort();
     System.out.println("Received request for host and port: " + baseUrl);

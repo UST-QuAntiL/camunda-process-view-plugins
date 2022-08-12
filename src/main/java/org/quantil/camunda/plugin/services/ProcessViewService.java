@@ -13,10 +13,11 @@ package org.quantil.camunda.plugin.services;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,22 +34,18 @@ public class ProcessViewService {
      *
      * @param engineName the name of the engine to access variables and deployments
      * @param processInstanceId the process instance ID of the instance to get the intial process view for
-     * @param URL the URL to access the Camunda REST API
+     * @param url the URL to access the Camunda REST API
      * @return the name of the initial process view
      */
-    public String findInitialViewName(String engineName, String processInstanceId, String URL) throws IOException {
+    public String findInitialViewName(String engineName, String processInstanceId, String url) throws IOException {
         System.out.println("Searching for initial process view name for process instance with ID: " + processInstanceId);
 
-        // retrieve the ID of the deployment the given process instance belongs to
-        String deploymentId = getDeploymentIdForProcessInstanceId(URL, processInstanceId);
-        System.out.println("Process instance belongs to deployment with ID: " + deploymentId);
-
         // retrieve resources for deployment
-        List<String> resources = getResourcesForDeployment(URL, deploymentId);
-        System.out.println("Retrieved list with " + deploymentId + " resources for the deployment!");
+        List<String> resources = getResourceListForProcessInstance(processInstanceId, url);
+        System.out.println("Retrieved list with " + resources.size() + " resources for the deployment!");
 
-        // TODO
-        return "original-workflow";
+        // we use the first BPMN file within the resources as initial view
+        return resources.stream().filter(resourceName -> resourceName.endsWith(".bpmn")).findFirst().orElseThrow(NoSuchElementException::new);
     }
 
     /**
@@ -57,14 +54,35 @@ public class ProcessViewService {
      * @param engineName the name of the engine to access variables and deployments
      * @param processInstanceId the process instance ID of the instance to get the next process view for
      * @param activeView the currently active view
-     * @param URL the URL to access the Camunda REST API
+     * @param url the URL to access the Camunda REST API
      * @return the name of the next view that should be activated
      */
-    public String getNextProcessView(String engineName, String processInstanceId, String activeView, String URL) {
+    public String getNextProcessView(String engineName, String processInstanceId, String activeView, String url) throws IOException {
         System.out.println("Retrieving next process view name for process instance with ID: " + processInstanceId);
+
+        // retrieve resources for deployment
+        List<String> resources = getResourceListForProcessInstance(processInstanceId, url);
+        System.out.println("Retrieved list with " + resources.size() + " resources for the deployment!");
 
         // TODO
         return "original-workflow";
+    }
+
+    /**
+     * Get the list of resources that belong to the deployment of the given process instance
+     *
+     * @param processInstanceId the process instance ID of the instance to get the resources for
+     * @param url the URL to access the Camunda REST API
+     * @return the list with names of contained resources
+     */
+    private List<String> getResourceListForProcessInstance(String processInstanceId, String url) throws IOException {
+
+        // retrieve the ID of the deployment the given process instance belongs to
+        String deploymentId = getDeploymentIdForProcessInstanceId(url, processInstanceId);
+        System.out.println("Process instance belongs to deployment with ID: " + deploymentId);
+
+        // retrieve resources for deployment
+        return getResourcesForDeployment(url, deploymentId);
     }
 
     /**
@@ -99,7 +117,6 @@ public class ProcessViewService {
         // extract deployment ID from response object
         JsonNode processDefinitionNode = new ObjectMapper().readTree(http.getInputStream());
         http.disconnect();
-        System.out.println(processDefinitionNode.toPrettyString());
         String deploymentId = processDefinitionNode.get("deploymentId").asText();
         System.out.println("Retrieving deployment ID: " + deploymentId);
 
@@ -128,9 +145,10 @@ public class ProcessViewService {
         // extract resources from response object
         JsonNode deploymentNode = new ObjectMapper().readTree(http.getInputStream());
         http.disconnect();
-
-        // TODO: parse to list with resources
-        System.out.println(deploymentNode.toPrettyString());
+        for (Iterator<JsonNode> it = deploymentNode.elements(); it.hasNext(); ) {
+            JsonNode resourceNode = it.next();
+            resourcesList.add(resourceNode.get("name").asText());
+        }
 
         return resourcesList;
     }
