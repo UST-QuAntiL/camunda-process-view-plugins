@@ -65,10 +65,19 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
         const typeCol = document.createElement("td");
         const valueCol = document.createElement("td");
 
-        if (value['type'] === 'String') {
+        // handle variable types for which values can be directly accessed
+        if (value['type'] === 'Boolean' || value['type'] === 'Short' || value['type'] === 'Integer'
+            || value['type'] === 'Long' || value['type'] === 'Double' || value['type'] === 'String') {
             nameCol.innerText = key;
             typeCol.innerText = value['type'];
             valueCol.innerText = value['value'];
+        } else if (value['type'] === 'File') {
+            console.log("Handle file variable: ", key)
+
+            // TODO
+        } else{
+            // other kinds of variables are not supported
+            continue;
         }
 
         // add retrieved variables to body
@@ -76,9 +85,6 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
         row.appendChild(typeCol);
         row.appendChild(valueCol);
         body.appendChild(row);
-
-        // TODO: handle different types of variables
-        console.log(key, value);
     }
 
     node.innerHTML = "";
