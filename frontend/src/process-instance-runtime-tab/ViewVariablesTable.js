@@ -59,6 +59,13 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
     for (const [key, value] of Object.entries(variablesJson)) {
         console.log("Found variable with name: ", key)
 
+        // do not visualize variable storing currently active view
+        if (key === "process-view-extension-active-view") {
+            continue;
+        }
+
+        // TODO: continue if not within view and variables are related to hybrid program
+
         // create new row
         const row = document.createElement("tr");
         const nameCol = document.createElement("td");
@@ -72,9 +79,17 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
             typeCol.innerText = value['type'];
             valueCol.innerText = value['value'];
         } else if (value['type'] === 'File') {
+            // handle file variables
             console.log("Handle file variable: ", key)
+            nameCol.innerText = key;
+            typeCol.innerText = 'File';
 
-            // TODO
+            // handle link to file
+            let anchor = document.createElement('a');
+            let textNode = document.createTextNode("Download");
+            anchor.appendChild(textNode);
+            anchor.href = processVariablesEndpoint + '/' + key + '/data';
+            valueCol.appendChild(anchor);
         } else{
             // other kinds of variables are not supported
             continue;
