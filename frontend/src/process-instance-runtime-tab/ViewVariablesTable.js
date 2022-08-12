@@ -25,6 +25,7 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
     </tr>`;
 
     // retrieve active view to apply variable filtering if required
+    const engineApi = camundaAPI.engineApi;
     const cockpitApi = camundaAPI.cockpitApi;
     const engine = camundaAPI.engine;
     const processViewEndpoint = `${cockpitApi}/plugin/camunda-process-views-plugin/${engine}/process-instance/${processInstanceId}/active-view`;
@@ -41,10 +42,10 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
     console.log("Active view to visualize variables for: ", activeView);
 
     // get all variables for the current process instance
-    const processVariablesEndpoint = `${cockpitApi}/process-instance/${processInstanceId}/variables`
+    const processVariablesEndpoint = `${engineApi}/process-instance/${processInstanceId}/variables`
     console.log("Retrieving variables from URL: ", processVariablesEndpoint)
     res = await fetch(processVariablesEndpoint,
-        {method: 'GET', body: '{}',
+        {method: 'GET',
             headers: {
                 "Accept": "application/json",
                 "X-XSRF-TOKEN": camundaAPI.CSRFToken,
