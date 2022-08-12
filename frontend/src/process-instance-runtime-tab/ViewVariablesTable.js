@@ -40,6 +40,18 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
     let activeView = response['activeProcessView'];
     console.log("Active view to visualize variables for: ", activeView);
 
+    // get all variables for the current process instance
+    const processVariablesEndpoint = `${cockpitApi}/process-instance/${processInstanceId}/variables`
+    console.log("Retrieving variables from URL: ", processVariablesEndpoint)
+    res = await fetch(processVariablesEndpoint,
+        {method: 'GET', body: '{}',
+            headers: {
+                "Accept": "application/json",
+                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+            }});
+    let variablesJson = await res.json();
+    console.log("Retrieved result for current variables: ", variablesJson);
+
     const body = table.createTBody();
 
     const row = document.createElement("tr");
