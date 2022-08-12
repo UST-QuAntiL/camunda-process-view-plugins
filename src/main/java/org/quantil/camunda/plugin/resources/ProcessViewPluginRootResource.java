@@ -59,7 +59,7 @@ public class ProcessViewPluginRootResource extends AbstractPluginRootResource {
 
       // set original workflow as initial view if not yet set
       ProcessViewService processViewService = new ProcessViewService();
-      activeProcessView = processViewService.findInitialViewName(engineName, processInstanceId, baseUrl);
+      activeProcessView = processViewService.findInitialViewName(processInstanceId, baseUrl);
       runtimeService.setVariable(processInstanceId, "process-view-extension-active-view", activeProcessView);
     } else{
       activeProcessView = activeProcessViewVariable.toString();
@@ -92,7 +92,8 @@ public class ProcessViewPluginRootResource extends AbstractPluginRootResource {
 
     // get name of next view
     ProcessViewService processViewService = new ProcessViewService();
-    String newProcessView = processViewService.getNextProcessView(engineName, processInstanceId, activeProcessView, baseUrl);
+    String newProcessView = processViewService.getNextProcessView(processInstanceId, activeProcessView, baseUrl);
+    runtimeService.setVariable(processInstanceId, "process-view-extension-active-view", newProcessView);
     System.out.println("New active process view has name: " + newProcessView);
     return Response.ok().build();
   }

@@ -32,12 +32,11 @@ public class ProcessViewService {
     /**
      * Find the name of the initial view, i.e., the workflow that is actually executed
      *
-     * @param engineName the name of the engine to access variables and deployments
      * @param processInstanceId the process instance ID of the instance to get the intial process view for
      * @param url the URL to access the Camunda REST API
      * @return the name of the initial process view
      */
-    public String findInitialViewName(String engineName, String processInstanceId, String url) throws IOException {
+    public String findInitialViewName(String processInstanceId, String url) throws IOException {
         System.out.println("Searching for initial process view name for process instance with ID: " + processInstanceId);
 
         // retrieve resources for deployment
@@ -51,21 +50,38 @@ public class ProcessViewService {
     /**
      * Returns the name of the next view that is available for the given process instance
      *
-     * @param engineName the name of the engine to access variables and deployments
      * @param processInstanceId the process instance ID of the instance to get the next process view for
      * @param activeView the currently active view
      * @param url the URL to access the Camunda REST API
      * @return the name of the next view that should be activated
      */
-    public String getNextProcessView(String engineName, String processInstanceId, String activeView, String url) throws IOException {
+    public String getNextProcessView(String processInstanceId, String activeView, String url) throws IOException {
         System.out.println("Retrieving next process view name for process instance with ID: " + processInstanceId);
 
         // retrieve resources for deployment
         List<String> resources = getResourceListForProcessInstance(processInstanceId, url);
         System.out.println("Retrieved list with " + resources.size() + " resources for the deployment!");
 
-        // TODO
-        return "original-workflow";
+        // order list to get next view in the row
+        List<String> orderedResources = new ArrayList<>();
+
+        // add BPMN file as initial view and sort remaining views using the resource names
+        String initialView = resources.stream().filter(resourceName -> resourceName.endsWith(".bpmn")).findFirst().orElseThrow(NoSuchElementException::new);
+        orderedResources.add(initialView);
+        resources.remove(initialView);
+        java.util.Collections.sort(resources);
+        orderedResources.addAll(resources);
+        System.out.println("Ordered list: " + orderedResources);
+
+        // return next view in the list or initial view if end is reached
+        int indexOfCurrentView = orderedResources.indexOf(activeView);
+        System.out.println("Current view index: " + indexOfCurrentView);
+        if (indexOfCurrentView + 1 < orderedResources.size()) {
+            return orderedResources.get(indexOfCurrentView + 1);
+        } else{
+            System.out.println("Reached last view, restarting with initial view...");
+            return initialView;
+        }
     }
 
     /**
