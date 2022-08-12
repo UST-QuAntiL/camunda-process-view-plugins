@@ -13,6 +13,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 
 import ProcessViewButton from "./process-instance-runtime-action/ProcessViewButton";
+import {renderTable} from "./process-instance-runtime-tab/ViewVariablesTable";
 
 const plugins = [
   {
@@ -29,6 +30,17 @@ const plugins = [
     },
     priority: 12,
   },
+ {
+    id: "process-instance-runtime-tab",
+    pluginPoint: "cockpit.processInstance.runtime.tab",
+    render: (node, { processInstanceId, api }) => {
+      renderTable(api, processInstanceId, node);
+    },
+    properties: {
+      label: "Data View"
+    },
+    priority: 12,
+  }
 ];
 
 export default plugins;
