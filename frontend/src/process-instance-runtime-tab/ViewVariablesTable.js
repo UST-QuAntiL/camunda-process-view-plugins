@@ -21,7 +21,6 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
         <th>Name</th>
         <th>Type</th>
         <th>Value</th>
-        <th>Scope</th>
     </tr>`;
 
     // retrieve active view to apply variable filtering if required
@@ -53,26 +52,34 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
     let variablesJson = await res.json();
     console.log("Retrieved result for current variables: ", variablesJson);
 
+    // create body containing the variables
     const body = table.createTBody();
 
-    const row = document.createElement("tr");
-    const nameCol = document.createElement("td");
-    const typeCol = document.createElement("td");
-    const valueCol = document.createElement("td");
-    const scopeCol = document.createElement("td");
+    // iterate through variables and add them to the table
+    for (const [key, value] of Object.entries(variablesJson)) {
+        console.log("Found variable with name: ", key)
 
-    nameCol.innerText = 'TODO';
-    typeCol.innerText = 'TODO';
-    valueCol.innerText = 'TODO';
-    scopeCol.innerText = 'TODO';
+        // create new row
+        const row = document.createElement("tr");
+        const nameCol = document.createElement("td");
+        const typeCol = document.createElement("td");
+        const valueCol = document.createElement("td");
 
-    row.appendChild(nameCol);
-    row.appendChild(typeCol);
-    row.appendChild(valueCol);
-    row.appendChild(scopeCol);
-    body.appendChild(row);
+        if (value['type'] === 'String') {
+            nameCol.innerText = key;
+            typeCol.innerText = value['type'];
+            valueCol.innerText = value['value'];
+        }
 
-    // TODO: add rows
+        // add retrieved variables to body
+        row.appendChild(nameCol);
+        row.appendChild(typeCol);
+        row.appendChild(valueCol);
+        body.appendChild(row);
+
+        // TODO: handle different types of variables
+        console.log(key, value);
+    }
 
     node.innerHTML = "";
     node.appendChild(table);
