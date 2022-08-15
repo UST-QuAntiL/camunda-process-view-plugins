@@ -71,9 +71,15 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let rootElement = elementArray[0];
     console.log('Creating overlay based on root element: ', rootElement)
 
+    // add overlay to remove existing elements from the diagram
+    overlays.add(rootElement, 'process-view-overlay', {
+        position: {left: 0, top: 0},
+        html: <rect width="100%" height="100%" fill="red"/>
+    });
+
     // add overlay to the retrieved root element
     overlays.add(rootElement, 'process-view-overlay', {
-        position: { left:0, top: 0 },
+        position: {left: 0, top: 0},
         html: viewSvg
     });
 
@@ -120,13 +126,104 @@ async function getSvg(modeler) {
  */
 function updateViewBox(svg, elementRegistry) {
 
-    // TODO
-    let width = 1000;
-    let height = 1000;
-    let x = 0;
-    let y = 0;
+    // search for the modeling elements with the minimal and maximal x and y values
+    let result = {};
+    let elements = elementRegistry.getAll();
+    console.log('Updating view box using the folowing elements: ', elements);
+    for (let i = 0; i < elements.length; i++) {
+        let element = elements[id];
+
+        // for sequence flows check the position of each waypoint and label
+        if (element.type === 'bpmn:SequenceFlow') {
+            if (element.waypoints) {
+                for (let j = 0; j < element.waypoints.length; j++) {
+                    let waypoint = element.waypoints[j];
+
+                    if (result.minX === undefined || result.minX > waypoint.x) {
+                        result.minX = waypoint.x;
+                    }
+
+                    if (result.minY === undefined || result.minY > waypoint.y) {
+                        result.minY = waypoint.y;
+                    }
+
+                    if (result.maxX === undefined || result.maxX < waypoint.x) {
+                        result.maxX = waypoint.x;
+                    }
+
+                    if (result.maxY === undefined || result.maxY < waypoint.y) {
+                        result.maxY = waypoint.y;
+                    }
+                }
+            }
+        } else {
+
+            // handle non sequence flow elements
+            result = updateViewBoxCoordinates(result, element);
+        }
+
+        // handle labels attached to arbitrary elements
+        if (element.labels) {
+            for (let j = 0; j < element.labels.length; j++) {
+                result = updateViewBoxCoordinates(result, element.labels[j]);
+            }
+        }
+    }
+
+    console.log('Minimum x value for candidate: ', result.minX);
+    console.log('Minimum y value for candidate: ', result.minY);
+    console.log('Maximum x value for candidate: ', result.maxX);
+    console.log('Maximum y value for candidate: ', result.maxY);
+
+    let width, height, x, y;
+    if (result.minX === undefined || result.minY === undefined || result.maxX === undefined || result.maxY === undefined) {
+        console.log('Error: unable to find modeling element with minimum and maximum x and y values!');
+
+        // default values in case an error occurred
+        width = 1000;
+        height = 1000;
+        x = 0;
+        y = 0;
+    } else {
+
+        // calculate view box and add a margin of 10 to the min/max values
+        x = result.minX - 10;
+        y = result.minY - 10;
+        width = result.maxX - result.minX + 20;
+        height = result.maxY - result.minY + 20;
+    }
+
     return svg.replace('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="0" height="0" viewBox="0 0 0 0" version="1.1">',
         '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + width + '" height="' + height + '" viewBox="' + x + ' ' + y + ' ' + width + ' ' + height + '" version="1.1">');
+}
+
+/**
+ * Update the view box coordinates with the coordinates of the given element if they provide higher/lower values for max/min
+ *
+ * @param coordindates the current view box coordinates, i.e., the min/max for x and y
+ * @param element the element to check if it provides new coordinates for the view box
+ * @return the updated view box coordinates
+ */
+function updateViewBoxCoordinates(coordindates, element) {
+
+    if (coordindates.minX === undefined || coordindates.minX > element.x) {
+        coordindates.minX = element.x;
+    }
+
+    if (coordindates.minY === undefined || coordindates.minY > element.y) {
+        coordindates.minY = element.y;
+    }
+
+    // max x and y also incorporate the width of the current element
+    if (coordindates.maxX === undefined || coordindates.maxX < element.x + element.width) {
+        coordindates.maxX = element.x + element.width;
+    }
+
+    if (coordindates.maxY === undefined || coordindates.maxY < element.y + element.height) {
+        coordindates.maxY = element.y + element.height;
+    }
+
+    return coordindates;
 }
 
 /**
