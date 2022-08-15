@@ -28,6 +28,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     )
     let response = await res.json();
     let activeView = response['activeProcessView'];
+    let activeViewXml = response['activeProcessViewXml'];
     console.log("Active view to visualize process view overlay for: ", activeView);
 
     // do not add overlays if executed workflow equals current view
@@ -46,6 +47,8 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     // get element registry to access elements of the diagram
     let elementRegistry = viewer.get('elementRegistry');
     console.log("Successfully prepared viewer to add overlay!");
+
+    console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
 
     elementRegistry.forEach(function(flowElement) {
         overlays.add(flowElement, 'emoji', {

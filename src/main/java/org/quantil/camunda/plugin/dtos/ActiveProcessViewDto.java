@@ -15,11 +15,21 @@ public class ActiveProcessViewDto {
 
     private String activeProcessView;
 
+    private String activeProcessViewXml;
+
     public String getActiveProcessView() {
         return activeProcessView;
     }
 
     public void setActiveProcessView(String activeProcessView) {
         this.activeProcessView = activeProcessView;
+    }
+
+    public String getActiveProcessViewXml() {
+        return activeProcessViewXml;
+    }
+
+    public void setActiveProcessViewXml(String activeProcessViewXml) {
+        this.activeProcessViewXml = activeProcessViewXml;
     }
 }

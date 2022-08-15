@@ -21,6 +21,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.apache.ibatis.javassist.NotFoundException;
 import org.camunda.bpm.cockpit.plugin.resource.AbstractPluginRootResource;
 import org.camunda.bpm.engine.ProcessEngine;
 import org.camunda.bpm.engine.ProcessEngines;
@@ -42,7 +43,8 @@ public class ProcessViewPluginRootResource extends AbstractPluginRootResource {
   @GET
   @Path("{engineName}/process-instance/{processInstanceId}/active-view")
   public ActiveProcessViewDto getCurrentlyActiveProcessView(@Context UriInfo uriInfo, @PathParam("engineName") String engineName,
-                                                            @PathParam("processInstanceId") String processInstanceId) throws IOException {
+                                                            @PathParam("processInstanceId") String processInstanceId)
+          throws IOException, NotFoundException {
     // workaround to access the Camunda REST API, as the Java API does not provide all required details
     String baseUrl = "http://" + uriInfo.getAbsolutePath().getHost() + ":" + uriInfo.getAbsolutePath().getPort();
     System.out.println("Received request for host and port: " + baseUrl);
@@ -52,22 +54,26 @@ public class ProcessViewPluginRootResource extends AbstractPluginRootResource {
     RuntimeService runtimeService = processEngine.getRuntimeService();
 
     // get variable storing the active process view
+    ProcessViewService processViewService = new ProcessViewService();
     Object activeProcessViewVariable = runtimeService.getVariable(processInstanceId, "process-view-extension-active-view");
     String activeProcessView;
     if (Objects.isNull(activeProcessViewVariable)){
       System.out.println("Adding default value as active process view is currently not set!");
 
       // set original workflow as initial view if not yet set
-      ProcessViewService processViewService = new ProcessViewService();
       activeProcessView = processViewService.findInitialViewName(processInstanceId, baseUrl);
       runtimeService.setVariable(processInstanceId, "process-view-extension-active-view", activeProcessView);
     } else{
       activeProcessView = activeProcessViewVariable.toString();
     }
 
+    // get XML representing the given view
+    String processViewXml = processViewService.getProcessViewXml(processInstanceId, activeProcessView, baseUrl);
+
     // return active process view
     ActiveProcessViewDto dto = new ActiveProcessViewDto();
     dto.setActiveProcessView(activeProcessView);
+    dto.setActiveProcessViewXml(processViewXml);
     return dto;
   }
 
