@@ -14,6 +14,7 @@ import ReactDOM from "react-dom";
 
 import ProcessViewButton from "./process-instance-runtime-action/ProcessViewButton";
 import {renderTable} from "./process-instance-runtime-tab/ViewVariablesTable";
+import {renderOverlay} from "./process-instance-diagram-overlay/ViewOverlay";
 
 const plugins = [
   {
@@ -38,6 +39,14 @@ const plugins = [
     },
     properties: {
       label: "Data View"
+    },
+    priority: 12,
+  },
+  {
+    id: "process-instance-diagram-overlay",
+    pluginPoint: "cockpit.processInstance.diagram.plugin",
+    render: (viewer, { processInstanceId, api }) => {
+      renderOverlay(viewer, api, processInstanceId);
     },
     priority: 12,
   }
