@@ -64,7 +64,11 @@ export async function renderTable(camundaAPI, processInstanceId, node) {
             continue;
         }
 
-        // TODO: continue if not within view and variables are related to hybrid program
+        // skip variables related to hybrid jobs if not within corresponding view
+        if (!activeView.includes('hybridRuntimeView') && key.startsWith('hybridJob-')) {
+            console.log('Skipping variable ' + key + ' as active view does not visualize data about hybrid Runtimes: ' + activeView);
+            continue;
+        }
 
         // create new row
         const row = document.createElement("tr");
