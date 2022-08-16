@@ -164,20 +164,45 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
                 }
             }
         )
-        let result = await res.json();
-        console.log('Currently active activity within hybrid program has ID: ', result['value']);
 
-        // TODO: handle cases where variable is not yet set as hybrid program is queued
+        // if variable is not yet set, the hybrid program is within the queue --> add token to first activity belonging to hybrid program
+        if (!res.ok) {
+            console.log('Received following status code when retrieving variable comprising currently active activity: ', res.status);
 
-        // search the corresponding activity in the process view
-        let activityInView = quantmeElementRegistry.get(result['value']);
-        console.log('Found activity with given ID in process view: ', activityInView);
+            let entryPoints = quantmeElementRegistry.getAll()
+                .filter(element => element['quantme:hybridRuntimeExecution'] !== undefined && element['quantme:hybridRuntimeExecution'] === 'true')
+                .filter(element => element['quantme:hybridProgramId'] !== undefined && element['quantme:hybridProgramId'] === hybridProgramId)
+                .filter(element => element['quantme:hybridProgramEntryPoint'] !== undefined && element['quantme:hybridProgramEntryPoint'] === 'true');
+            console.log('Found ' + entryPoints.length + ' entry point for given hybrid program ID!')
 
-        // add overlay to the retrieved root element
-        overlays.add(rootElement, 'process-view-overlay', {
-            position: {left: activityInView.x - 10, top: activityInView.y + activityInView.height - 10},
-            html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
-        });
+            // there must be exactly one entry point
+            if (entryPoints.length !== 1) {
+                console.error('There must be exactly one entry point for the hybrid program!');
+                return;
+            }
+            let entryPoint = entryPoints[0];
+            console.log('Found entry point to add process token: ', entryPoint);
+
+            // add overlay to the retrieved root element
+            overlays.add(rootElement, 'process-view-overlay', {
+                position: {left: entryPoint.x - 10, top: entryPoint.y + entryPoint.height - 10},
+                html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
+            });
+        } else {
+            // add token to retrieved activity
+            let result = await res.json();
+            console.log('Currently active activity within hybrid program has ID: ', result['value']);
+
+            // search the corresponding activity in the process view
+            let activityInView = quantmeElementRegistry.get(result['value']);
+            console.log('Found activity with given ID in process view: ', activityInView);
+
+            // add overlay to the retrieved root element
+            overlays.add(rootElement, 'process-view-overlay', {
+                position: {left: activityInView.x - 10, top: activityInView.y + activityInView.height - 10},
+                html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
+            });
+        }
     } else{
         // if activity is not part of a hybrid program execution it was not changed during rewrite and an activity with the same ID is part of the process view
         console.log('Active activity is regular activity of the executed workflow. Adding process token...');
