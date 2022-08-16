@@ -19,21 +19,10 @@ import quantMEModule from './quantme';
 export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log('Rendering view overlay using viewer: ', viewer)
     console.log('View corresponds to process instance ID: ', processInstanceId)
-
-    // retrieve active view to apply variable filtering if required
-    const cockpitApi = camundaAPI.cockpitApi;
     console.log('Camunda APIs to generate overlays: ', camundaAPI);
-    const processViewEndpoint = `${cockpitApi}/plugin/camunda-process-views-plugin/default/process-instance/${processInstanceId}/active-view`;
-    console.log('Retrieving currently active view using URL: ', processViewEndpoint);
-    let res = await fetch(processViewEndpoint,
-        {
-            headers: {
-                'Accept': 'application/json',
-                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
-            }
-        }
-    )
-    let response = await res.json();
+
+    // get active process view name and corresponding Xml from backend
+    let response = await getActiveProcessView(camundaAPI, processInstanceId);
     let activeView = response['activeProcessView'];
     let activeViewXml = response['activeProcessViewXml'];
     console.log("Active view to visualize process view overlay for: ", activeView);
@@ -46,11 +35,11 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 
     // get element registry and overlays to retrieve elements and attach new overlays to them
     let overlays = viewer.get("overlays")
-    let viewerRegistry = viewer.get("elementRegistry")
+    let viewerElementRegistry = viewer.get("elementRegistry")
     console.log("Successfully prepared viewer to add overlay!");
 
     // get the flow element representing the whole BPMN plane
-    let elementArray = viewerRegistry.getAll();
+    let elementArray = viewerElementRegistry.getAll();
     console.log('Diagram contains the following elements: ', elementArray);
     elementArray = elementArray.filter(element => element.type === 'bpmn:Process');
     console.log('Found ' + elementArray.length + ' flow elements of type "bpmn:Process"!');
@@ -85,7 +74,73 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
         html: viewSvg
     });
 
-    // TODO: add overlay comprising process token
+    // get the currently active activities for the process instance
+    let activeActivity = await getActiveActivities(camundaAPI, processInstanceId);
+    console.log('Currently active activities to visualize: ', activeActivity);
+
+    // visualize process token for retrieved active activities
+    activeActivity.forEach(activeActivity => visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeModeler, viewerElementRegistry));
+}
+
+/**
+ * Get the currently active process view and the corresponding Xml file from the backend
+ *
+ * @param camundaAPI the Camunda APIs to access the backend
+ * @param processInstanceId the ID of the process instance to retrieve the active process view for
+ * @returns the Json returned by the backend comprising the active process view and the corresponding Xml file
+ */
+async function getActiveProcessView(camundaAPI, processInstanceId) {
+    const cockpitApi = camundaAPI.cockpitApi;
+    const processViewEndpoint = `${cockpitApi}/plugin/camunda-process-views-plugin/default/process-instance/${processInstanceId}/active-view`;
+    console.log('Retrieving currently active view using URL: ', processViewEndpoint);
+    let res = await fetch(processViewEndpoint,
+        {
+            headers: {
+                'Accept': 'application/json',
+                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+            }
+        }
+    )
+    return await res.json();
+}
+
+/**
+ * Get the currently active activities for the given process instance
+ *
+ * @param camundaAPI the Camunda APIs to access the backend
+ * @param processInstanceId the ID of the process instance to retrieve the active activity for
+ * @returns an array with currently active activities
+ */
+async function getActiveActivities(camundaAPI, processInstanceId) {
+    const activityInstanceEndpoint = `/engine-rest/process-instance/${processInstanceId}/activity-instances`
+    console.log("Retrieving active activity from URL: ", activityInstanceEndpoint)
+    let res = await fetch(activityInstanceEndpoint,
+        {
+            headers: {
+                'Accept': 'application/json',
+                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+            }
+        }
+    )
+    return (await res.json())['childActivityInstances'];
+}
+
+/**
+ * Visualize the process token for the given active activity as an overlay
+ *
+ * @param activeActivityId the ID of the activity to visualize the process token for
+ * @param overlays the set of overlays to add the visualization
+ * @param quantmeModeler the modeler with the process view to retrieve the coordinates for the token
+ * @param viewerElementRegistry the element registry of the viewer to retrieve all required details about the active activity
+ */
+function visualizeActiveActivities(activeActivityId, overlays, quantmeModeler, viewerElementRegistry) {
+    console.log('Visualizing process token for active activity with ID: ', activeActivityId);
+
+    // get activity from executed workflow related to given ID
+    let activeActivity = viewerElementRegistry.get(activeActivityId);
+    console.log('Retrieved corresponding activity object: ', activeActivity);
+
+    // TODO
 }
 
 /**
