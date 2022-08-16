@@ -80,7 +80,8 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log('Currently active activities to visualize: ', activeActivity);
 
     // visualize process token for retrieved active activities
-    activeActivity.forEach(activeActivity => visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement));
+    activeActivity.forEach(activeActivity =>
+        visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI));
 }
 
 /**
@@ -134,8 +135,10 @@ async function getActiveActivities(camundaAPI, processInstanceId) {
  * @param quantmeElementRegistry the element registry of the process view to retrieve the coordinates for the token
  * @param viewerElementRegistry the element registry of the viewer to retrieve all required details about the active activity
  * @param rootElement the root element to use as parent for adding overlays
+ * @param processInstanceId the ID of the process instance for which the process token is visualized
+ * @param camundaAPI the Camunda APIs to access the backend
  */
-function visualizeActiveActivities(activeActivityId, overlays, quantmeElementRegistry, viewerElementRegistry, rootElement) {
+async function visualizeActiveActivities(activeActivityId, overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI) {
     console.log('Visualizing process token for active activity with ID: ', activeActivityId);
 
     // get activity from executed workflow related to given ID
@@ -147,10 +150,34 @@ function visualizeActiveActivities(activeActivityId, overlays, quantmeElementReg
     console.log('Found attributes: ', activeActivityAttributes);
 
     // handle activities related to hybrid program executions and regular activities differently
-    if (activeActivityAttributes['quantme:hybridRuntimeExecution'] !== undefined && activeActivityAttributes['quantme:hybridRuntimeExecution'] === true) {
-        console.log('Active activity belongs to hybrid program execution with ID: ', activeActivityAttributes['quantme:hybridProgramId']);
+    if (activeActivityAttributes['quantme:hybridRuntimeExecution'] !== undefined && activeActivityAttributes['quantme:hybridRuntimeExecution'] === 'true') {
+        let hybridProgramId = activeActivityAttributes['quantme:hybridProgramId']
+        console.log('Active activity belongs to hybrid program execution with ID: ', hybridProgramId);
 
-        // TODO
+        // get current value of the variable containing the ID of the activity that is currently executed within the hybrid program
+        const variableEndpoint = `/engine-rest/process-instance/${processInstanceId}/variables/${hybridProgramId}`
+        let res = await fetch(variableEndpoint,
+            {
+                headers: {
+                    'Accept': 'application/json',
+                    "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+                }
+            }
+        )
+        let result = await res.json();
+        console.log('Currently active activity within hybrid program has ID: ', result['value']);
+
+        // TODO: handle cases where variable is not yet set as hybrid program is queued
+
+        // search the corresponding activity in the process view
+        let activityInView = quantmeElementRegistry.get(result['value']);
+        console.log('Found activity with given ID in process view: ', activityInView);
+
+        // add overlay to the retrieved root element
+        overlays.add(rootElement, 'process-view-overlay', {
+            position: {left: activityInView.x - 10, top: activityInView.y + activityInView.height - 10},
+            html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
+        });
     } else{
         // if activity is not part of a hybrid program execution it was not changed during rewrite and an activity with the same ID is part of the process view
         console.log('Active activity is regular activity of the executed workflow. Adding process token...');
