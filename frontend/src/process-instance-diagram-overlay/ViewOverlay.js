@@ -9,6 +9,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import './process-instance-diagram.scss'
+
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import camundaModdlePackage from 'camunda-bpmn-moddle/resources/camunda';
 import quantMEModdleExtension from './quantum4bpmn.json';
@@ -47,18 +49,6 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let viewerRegistry = viewer.get("elementRegistry")
     console.log("Successfully prepared viewer to add overlay!");
 
-    console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
-
-    // create modeler capable of understanding the QuantME modeling constructs
-    let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
-    console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
-    let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
-
-    // export view as Svg
-    let viewSvg = await getSvg(quantmeModeler);
-    viewSvg = updateViewBox(viewSvg, quantmeElementRegistry)
-    console.log('Created Svg for process view: ', viewSvg);
-
     // get the flow element representing the whole BPMN plane
     let elementArray = viewerRegistry.getAll();
     console.log('Diagram contains the following elements: ', elementArray);
@@ -72,10 +62,22 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log('Creating overlay based on root element: ', rootElement)
 
     // add overlay to remove existing elements from the diagram
-    overlays.add(rootElement, 'process-view-overlay', {
+    overlays.add(rootElement, 'background-overlay', {
         position: {left: 0, top: 0},
-        html: <rect width="100%" height="100%" fill="red"/>
+        html: '<div class="background-div"></div>'
     });
+
+    console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
+
+    // create modeler capable of understanding the QuantME modeling constructs
+    let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
+    console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
+    let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
+
+    // export view as Svg
+    let viewSvg = await getSvg(quantmeModeler);
+    viewSvg = updateViewBox(viewSvg, quantmeElementRegistry)
+    console.log('Created Svg for process view: ', viewSvg);
 
     // add overlay to the retrieved root element
     overlays.add(rootElement, 'process-view-overlay', {
@@ -83,20 +85,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
         html: viewSvg
     });
 
-
-    // TODO: add overlay
-    let properties = new Set();
-    let currentObj = viewer;
-    do {
-        Object.getOwnPropertyNames(currentObj).map(item => properties.add(item));
-    } while ((currentObj = Object.getPrototypeOf(currentObj)));
-    console.log([...properties.keys()].filter(item => typeof viewer[item] === 'function'));
-    properties = new Set();
-    currentObj = quantmeElementRegistry;
-    do {
-        Object.getOwnPropertyNames(currentObj).map(item => properties.add(item));
-    } while ((currentObj = Object.getPrototypeOf(currentObj)));
-    console.log([...properties.keys()].filter(item => typeof quantmeElementRegistry[item] === 'function'));
+    // TODO: add overlay comprising process token
 }
 
 /**
@@ -128,10 +117,11 @@ function updateViewBox(svg, elementRegistry) {
 
     // search for the modeling elements with the minimal and maximal x and y values
     let result = {};
-    let elements = elementRegistry.getAll();
-    console.log('Updating view box using the folowing elements: ', elements);
+    let elements = elementRegistry.getAll().filter(element => element.type !== 'bpmn:Process');
+    console.log('Updating view box using the following elements: ', elements);
     for (let i = 0; i < elements.length; i++) {
-        let element = elements[id];
+        let element = elements[i];
+        console.log('Checking element: ', element);
 
         // for sequence flows check the position of each waypoint and label
         if (element.type === 'bpmn:SequenceFlow') {
