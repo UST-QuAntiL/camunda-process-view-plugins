@@ -169,10 +169,15 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
         if (!res.ok) {
             console.log('Received following status code when retrieving variable comprising currently active activity: ', res.status);
 
-            let entryPoints = quantmeElementRegistry.getAll()
-                .filter(element => element['quantme:hybridRuntimeExecution'] !== undefined && element['quantme:hybridRuntimeExecution'] === 'true')
-                .filter(element => element['quantme:hybridProgramId'] !== undefined && element['quantme:hybridProgramId'] === hybridProgramId)
-                .filter(element => element['quantme:hybridProgramEntryPoint'] !== undefined && element['quantme:hybridProgramEntryPoint'] === 'true');
+            // find the entry point for the workflow part belonging to the hybrid program
+            let entryPoints = quantmeElementRegistry.getAll().map(element => element.businessObject)
+                .filter(element => (element.$attrs['quantme:hybridRuntimeExecution'] !== undefined && element.$attrs['quantme:hybridRuntimeExecution'] === 'true')
+                    || (element.$attrs['hybridRuntimeExecution'] !== undefined && element.$attrs['hybridRuntimeExecution'] === 'true'))
+                .filter(element => (element.$attrs['quantme:hybridProgramId'] !== undefined && element.$attrs['quantme:hybridProgramId'] === hybridProgramId)
+                    || (element.$attrs['hybridProgramId'] !== undefined && element.$attrs['hybridProgramId'] === hybridProgramId));
+            console.log('Found ' + entryPoints.length + ' activities belonging to hybrid program ID: ', entryPoints);
+            entryPoints = entryPoints.filter(element => (element.$attrs['quantme:hybridProgramEntryPoint'] !== undefined && element.$attrs['quantme:hybridProgramEntryPoint'] === 'true')
+                    || (element.$attrs['hybridProgramEntryPoint'] !== undefined && element.$attrs['hybridProgramEntryPoint'] === 'true'));
             console.log('Found ' + entryPoints.length + ' entry point for given hybrid program ID!')
 
             // there must be exactly one entry point
@@ -184,6 +189,7 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
             console.log('Found entry point to add process token: ', entryPoint);
 
             // add overlay to the retrieved root element
+            entryPoint = quantmeElementRegistry.get(entryPoint.id);
             overlays.add(rootElement, 'process-view-overlay', {
                 position: {left: entryPoint.x - 10, top: entryPoint.y + entryPoint.height - 10},
                 html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
