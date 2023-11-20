@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2023 Institute of Architecture of Application Systems -
+ * University of Stuttgart
+ *
+ * This program and the accompanying materials are made available under the
+ * terms the Apache Software License 2.0
+ * which is available at https://www.apache.org/licenses/LICENSE-2.0.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 export async function renderDeploymentInformationTable(node, {processInstanceId, api}) {
     node.innerHTML = "Loading..."
     const {cockpitApi, engine} = api;
@@ -10,7 +21,7 @@ export async function renderDeploymentInformationTable(node, {processInstanceId,
     })
     const deploymentInformation = await res.json();
     if (deploymentInformation.length === 0) {
-        node.innerHTML = "No deployments found."
+        node.innerHTML = "No deployments found.";
         return;
     }
     const body = deploymentInformation
