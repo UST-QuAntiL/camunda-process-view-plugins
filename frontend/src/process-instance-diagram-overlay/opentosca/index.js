@@ -9,11 +9,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import QuantMERenderer from './QuantMERenderer';
-import QuantMEPathMap from './QuantMEPathMap';
+import OpenTOSCARenderer from './OpenTOSCARenderer';
 
 export default {
-  __init__: ['quantMERenderer', 'quantMEPathMap'],
-  quantMERenderer: ['type', QuantMERenderer],
-  quantMEPathMap: ['type', QuantMEPathMap],
+  __init__: ['openTOSCARenderer'],
+  openTOSCARenderer: ['type', OpenTOSCARenderer],
 };

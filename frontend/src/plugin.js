@@ -13,8 +13,11 @@ import React from "react";
 import ReactDOM from "react-dom";
 
 import ProcessViewButton from "./process-instance-runtime-action/ProcessViewButton";
+import DeploymentViewButton from "./process-instance-runtime-action/DeploymentViewButton.js";
 import {renderTable} from "./process-instance-runtime-tab/ViewVariablesTable";
 import {renderOverlay} from "./process-instance-diagram-overlay/ViewOverlay";
+import {renderDeploymentInformationTable} from "./deployment-information-table.js";
+import {addSubprocessToggleButton} from "./deployment-subprocess-visualization.js";
 
 const plugins = [
   {
@@ -38,7 +41,7 @@ const plugins = [
       renderTable(api, processInstanceId, node);
     },
     properties: {
-      label: "Data View"
+      label: "Quantum Data View"
     },
     priority: 12,
   },
@@ -49,7 +52,22 @@ const plugins = [
       renderOverlay(viewer, api, processInstanceId);
     },
     priority: 12,
-  }
+  },
+  {
+    id: "process-instance-deployment-runtime-tab",
+    pluginPoint: "cockpit.processInstance.runtime.tab",
+    render: renderDeploymentInformationTable,
+    properties: {
+        label: "Deployment Data View"
+    },
+    priority: 12,
+},
+{
+    id: "process-instance-deployment-diagram-overlay",
+    pluginPoint: "cockpit.processInstance.diagram.plugin",
+    render: addSubprocessToggleButton,
+    priority: 12,
+}
 ];
 
 export default plugins;

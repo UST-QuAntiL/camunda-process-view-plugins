@@ -15,7 +15,9 @@ import '../camunda.scss'
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import camundaModdlePackage from 'camunda-bpmn-moddle/resources/camunda';
 import quantMEModdleExtension from './quantum4bpmn.json';
+import openTOSCAModdleExtension from './opentosca4bpmn.json';
 import quantMEModule from './quantme';
+import openTOSCAModule from './opentosca';
 
 export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log('Rendering view overlay using viewer: ', viewer)
@@ -308,8 +310,8 @@ function updateViewBox(svg, elementRegistry) {
     } else {
 
         // calculate view box and add a margin of 10 to the min/max values
-        width = result.maxX + 10;
-        height = result.maxY + 10;
+        width = result.maxX + 1000;
+        height = result.maxY + 1000;
     }
 
     return svg.replace('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="0" height="0" viewBox="0 0 0 0" version="1.1">',
@@ -378,11 +380,13 @@ async function createQuantmeModelerFromXml(xml) {
 function createQuantmeModeler() {
     return new BpmnModeler({
         additionalModules: [
-            quantMEModule
+            quantMEModule,
+            openTOSCAModule
         ],
         moddleExtensions: {
             camunda: camundaModdlePackage,
-            quantME: quantMEModdleExtension
+            quantME: quantMEModdleExtension,
+            opentosca: openTOSCAModdleExtension
         }
     });
 }

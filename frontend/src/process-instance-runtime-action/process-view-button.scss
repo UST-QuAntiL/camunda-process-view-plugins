@@ -1,10 +1,16 @@
 .process-view-button {
   width: 40px;
   height: 34px;
+  
+  &.clicked {
+    background-color: lightslategrey;
+    color: white;
+    /* Add any other styles you want to apply when the button is clicked */
+  }
 }
 
 .process-view-button-picture {
-  width: 18px;
+  width: 15px;
   height: auto;
   object-fit: contain;
   justify-content: center;

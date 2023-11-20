@@ -12,9 +12,14 @@
 import React, {useEffect, useState} from "react";
 
 import "./process-view-button.scss"
+import OpenTOSCARenderer from "../process-instance-diagram-overlay/opentosca/OpenTOSCARenderer";
 
-function ProcessViewButton({camundaAPI, processInstanceId}) {
+function DeploymentViewButton({camundaAPI, processInstanceId, viewer}) {
+    console.log(viewer)
+    const canvas = viewer.get("canvas")
+    new OpenTOSCARenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas)
     const [activatedView, setActivatedView] = useState();
+    const [showSubProcesses, setSubProcesses] = useState(false);
     const [buttonClicked, setButtonClicked] = useState(
         // Set the initial state from localStorage or default to false
         localStorage.getItem("buttonClicked") === "false"
@@ -47,6 +52,25 @@ function ProcessViewButton({camundaAPI, processInstanceId}) {
     }, [buttonClicked]);
 
     async function openDialog(activatedView){
+
+    const elementRegistry = viewer.get("elementRegistry")
+    const drilldownOverlayBehavior = viewer.get("drilldownOverlayBehavior")
+    const subProcesses = elementRegistry
+        .filter(element => element.type === "bpmn:SubProcess" && element.collapsed)
+    const update = () => {
+        for (const subProcess of subProcesses) {
+            if (subProcess.parent !== canvas.getRootElement()) continue;
+            const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask"
+            if (subProcess.type !== newType) {
+                canvas.removeShape(subProcess)
+                subProcess.type = newType
+                canvas.addShape(subProcess)
+                if (showSubProcesses) {
+                    drilldownOverlayBehavior.addOverlay(subProcess)
+                }
+            }
+        }
+    }
             console.log('Switching from currently activated view: ', activatedView);
             setButtonClicked((prev) => !prev);
 
@@ -60,16 +84,22 @@ function ProcessViewButton({camundaAPI, processInstanceId}) {
                     "X-XSRF-TOKEN": camundaAPI.CSRFToken,
                 }});
             console.log('Switching to next view resulted in: ', rawResponse);
-            location.reload();
+            update();
+            //location.reload();
     }
+
+    actionButtonElement.addEventListener("click", () => {
+        showSubProcesses = !showSubProcesses;
+        update()
+    })
 
     return (
         <>
-            <button className={`btn btn-default btn-toolbar ng-scope process-view-button ${buttonClicked ? "clicked" : ""}`} title="Toggle Quantum View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
+            <button className={`btn btn-default btn-toolbar ng-scope process-view-button ${buttonClicked ? "clicked" : ""}`} title="Toggle Quantum View" onClick={() => openDialog(viewer)} tooltip-placement="left">
                 <img class="process-view-button-picture" src="https://raw.githubusercontent.com/PlanQK/workflow-modeler/master/components/bpmn-q/modeler-component/extensions/quantme/resources/QuantME_Logo.svg" />
             </button>
         </>
     );
 }
 
-export default ProcessViewButton;
+export default DeploymentViewButton;

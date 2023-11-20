@@ -1,5 +1,10 @@
 .background-div {
-  width: 10000pt;
-  height: 10000pt;
+  width: 20000pt;
+  height: 20000pt;
   background-color: #FFFFFF;
+}
+
+.djs-overlay-background-overlay {
+  top: -1000px !important;
+  left: -1000px !important;
 }
