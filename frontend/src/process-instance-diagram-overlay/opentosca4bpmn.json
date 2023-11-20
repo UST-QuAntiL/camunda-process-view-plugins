@@ -19,6 +19,11 @@
           "name": "connectorUrl",
           "isAttr": true,
           "type": "String"
+        },
+        {
+          "name": "quantmeType",
+          "isAttr": true,
+          "type": "String"
         }
       ]
     }

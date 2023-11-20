@@ -60,30 +60,32 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     });
 
     console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
+    console.log(viewer.get("canvas"))
+    viewer.importXML('<?xml version="1.0" encoding="UTF-8"?><bpmn2:definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="sample-diagram" targetNamespace="http://bpmn.io/schema/bpmn" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd">  <bpmn2:process id="Process_1" isExecutable="true">    <bpmn2:startEvent id="StartEvent_1" />  </bpmn2:process>  <bpmndi:BPMNDiagram id="BPMNDiagram_1">    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">        <dc:Bounds x="412" y="240" width="36" height="36" />      </bpmndi:BPMNShape>    </bpmndi:BPMNPlane>  </bpmndi:BPMNDiagram></bpmn2:definitions>');
 
     // create modeler capable of understanding the QuantME modeling constructs
-    let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
-    console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
-    let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
+    //let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
+    //console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
+    //let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
 
     // export view as Svg
-    let viewSvg = await getSvg(quantmeModeler);
-    viewSvg = updateViewBox(viewSvg, quantmeElementRegistry)
-    console.log('Created Svg for process view: ', viewSvg);
+    //let viewSvg = await getSvg(quantmeModeler);
+    //viewSvg = updateViewBox(viewSvg, quantmeElementRegistry)
+    //console.log('Created Svg for process view: ', viewSvg);
 
     // add overlay to the retrieved root element
-    overlays.add(rootElement, 'process-view-overlay', {
-        position: {left: 0, top: 0},
-        html: viewSvg
-    });
+    //overlays.add(rootElement, 'process-view-overlay', {
+      //  position: {left: 0, top: 0},
+       // html: viewSvg
+    //});
 
     // get the currently active activities for the process instance
-    let activeActivity = await getActiveActivities(camundaAPI, processInstanceId);
-    console.log('Currently active activities to visualize: ', activeActivity);
+    //let activeActivity = await getActiveActivities(camundaAPI, processInstanceId);
+    //console.log('Currently active activities to visualize: ', activeActivity);
 
     // visualize process token for retrieved active activities
-    activeActivity.forEach(activeActivity =>
-        visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI));
+    //a/ctiveActivity.forEach(activeActivity =>
+       // visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI));
 }
 
 /**

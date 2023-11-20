@@ -25,6 +25,7 @@ import {
   innerSVG
 } from 'tiny-svg';
 import {query as domQuery} from 'min-dom';
+import { getQuantMESVG } from "./QuantMESVGMap";
 
 const HIGH_PRIORITY = 14001;
 const SERVICE_TASK_TYPE = 'bpmn:ServiceTask';
@@ -125,12 +126,20 @@ export default class OpenTOSCARenderer {
 
           if (element.type === SERVICE_TASK_TYPE) {
               if (type === 'render.shape') {
-                  const task = bpmnRenderer.drawShape(parentGfx, element);
+                  let task = bpmnRenderer.drawShape(parentGfx, element);
                   this.addSubprocessView(parentGfx, element, bpmnRenderer);
                   this.maybeAddShowDeploymentModelButton(parentGfx, element);
+                  //(parentGfx, getQuantMESVG("TASK_TYPE_RESULT_COMBINATION"), null, true);
                   return task;
               }
           }
+          if (element.type === "bpmn:Task") {
+            if (type === 'render.shape') {
+                let task = bpmnRenderer.drawShape(parentGfx, element);
+                drawTaskSVG(parentGfx, getQuantMESVG("TASK_TYPE_RESULT_COMBINATION"), null, true);
+                return task;
+            }
+        }
       });
 
       this.styles = styles;
