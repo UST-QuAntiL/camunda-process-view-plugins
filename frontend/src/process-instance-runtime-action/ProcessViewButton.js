@@ -9,11 +9,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
 
 import "./process-view-button.scss"
 
-function ProcessViewButton({camundaAPI, processInstanceId}) {
+function ProcessViewButton({ camundaAPI, processInstanceId }) {
     const [activatedView, setActivatedView] = useState();
 
     const cockpitApi = camundaAPI.cockpitApi;
@@ -41,26 +41,41 @@ function ProcessViewButton({camundaAPI, processInstanceId}) {
         });
     }, []);
 
-    async function openDialog(activatedView){
-            console.log('Switching from currently activated view: ', activatedView);
+    async function openDialog(activatedView) {
+        console.log('Switching from currently activated view: ', activatedView);
 
-            // switch to next view for the process instance
-            console.log('Performing POST request at following URL to switch view: ', processViewEndpoint + '/change-view');
-            const rawResponse = await fetch(processViewEndpoint + '/change-view',
-                {method: 'POST', body: '{}',
+        // switch to next view for the process instance
+        console.log('Performing POST request at following URL to switch view: ', processViewEndpoint + '/change-view');
+        const rawResponse = await fetch(processViewEndpoint + '/change-view',
+            {
+                method: 'POST', body: '{}',
                 headers: {
                     "Accept": "application/json",
                     "Content-Type": "application/json",
                     "X-XSRF-TOKEN": camundaAPI.CSRFToken,
-                }});
-            console.log('Switching to next view resulted in: ', rawResponse);
-            location.reload();
+                }
+            });
+        console.log('Switching to next view resulted in: ', rawResponse);
+        location.reload();
+    }
+
+    function triggerDeployment() {
+        const deploymentButton = document.getElementById("deploymentButton");
+        if (deploymentButton) {
+            deploymentButton.click();
+        } else {
+            console.error("Button not found");
+        }
+
     }
 
     return (
         <>
             <button className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Quantum View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
                 <img class="process-view-button-picture" src="https://raw.githubusercontent.com/PlanQK/workflow-modeler/master/components/bpmn-q/modeler-component/extensions/quantme/resources/QuantME_Logo.svg" />
+            </button>
+            <button className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Deployment View" onClick={() => triggerDeployment()} tooltip-placement="left">
+                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/PlanQK/workflow-modeler/feature/policies/components/bpmn-q/modeler-component/extensions/opentosca/resources/deployment_policy_palette.svg" />
             </button>
         </>
     );

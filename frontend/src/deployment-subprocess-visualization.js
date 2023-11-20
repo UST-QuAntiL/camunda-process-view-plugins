@@ -13,14 +13,14 @@ import OpenTOSCARenderer from "./process-instance-diagram-overlay/opentosca/Open
 
 export function addSubprocessToggleButton(viewer, options, { control }) {
     const canvas = viewer.get("canvas");
-    new OpenTOSCARenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
     const actionButtonElement = document.createElement("button");
+    actionButtonElement.id = "deploymentButton";
+    actionButtonElement.style.display = "none";
     let showSubProcesses = false;
-
     const drilldownOverlayBehavior = viewer.get("drilldownOverlayBehavior");
 
 
-    const update = () => {
+    const update = (showSubProcesses) => {
         const subProcesses = [];
         const findSubprocesses = (element) => {
             if (element.businessObject.get('opentosca:deploymentModelUrl')) {
@@ -32,8 +32,7 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
                 }
             }
         }
-        canvas.getRootElement().children.forEach(findSubprocesses)
-        actionButtonElement.innerText = showSubProcesses ? "Hide Deployment Sub Processes" : "Show Deployment Sub Processes"
+        canvas.getRootElement().children.forEach(findSubprocesses);
         for (const subProcess of subProcesses) {
             const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask"
             if (subProcess.type !== newType) {
@@ -41,15 +40,17 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
                 subProcess.type = newType;
                 canvas.addShape(subProcess);
                 if (showSubProcesses) {
+                    console.log("make overlay")
                     drilldownOverlayBehavior.addOverlay(subProcess);
                 }
             }
         }
     }
-    update()
+    update(showSubProcesses);
     actionButtonElement.addEventListener("click", () => {
+        new OpenTOSCARenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
         showSubProcesses = !showSubProcesses;
-        update();
+        update(showSubProcesses);
     })
     control.addAction({ html: actionButtonElement })
 }

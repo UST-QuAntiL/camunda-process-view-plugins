@@ -119,16 +119,16 @@ function drawTaskSVG(parentGfx, importSVG, svgAttributes, foreground) {
 export default class OpenTOSCARenderer {
   constructor(eventBus, styles, bpmnRenderer, textRenderer, canvas) {
       eventBus.on(['render.shape'], HIGH_PRIORITY, (evt, context) => {
-          const type = evt.type
-          const element = context.element
-          const parentGfx = context.gfx
+          const type = evt.type;
+          const element = context.element;
+          const parentGfx = context.gfx;
 
           if (element.type === SERVICE_TASK_TYPE) {
               if (type === 'render.shape') {
                   const task = bpmnRenderer.drawShape(parentGfx, element);
                   this.addSubprocessView(parentGfx, element, bpmnRenderer);
                   this.maybeAddShowDeploymentModelButton(parentGfx, element);
-                  return task
+                  return task;
               }
           }
       });
