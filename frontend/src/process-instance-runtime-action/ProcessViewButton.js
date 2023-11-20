@@ -15,10 +15,6 @@ import "./process-view-button.scss"
 
 function ProcessViewButton({camundaAPI, processInstanceId}) {
     const [activatedView, setActivatedView] = useState();
-    const [buttonClicked, setButtonClicked] = useState(
-        // Set the initial state from localStorage or default to false
-        localStorage.getItem("buttonClicked") === "false"
-      );
 
     const cockpitApi = camundaAPI.cockpitApi;
     const engine = camundaAPI.engine;
@@ -27,7 +23,6 @@ function ProcessViewButton({camundaAPI, processInstanceId}) {
 
     // get the currently active view by retrieving the corresponding variable of the process instance
     useEffect(() => {
-        localStorage.setItem("buttonClicked", buttonClicked);
         fetch(
             processViewEndpoint + '/active-view',
             {
@@ -44,11 +39,10 @@ function ProcessViewButton({camundaAPI, processInstanceId}) {
         }).catch(err => {
             console.error(err);
         });
-    }, [buttonClicked]);
+    }, []);
 
     async function openDialog(activatedView){
             console.log('Switching from currently activated view: ', activatedView);
-            setButtonClicked((prev) => !prev);
 
             // switch to next view for the process instance
             console.log('Performing POST request at following URL to switch view: ', processViewEndpoint + '/change-view');
@@ -65,7 +59,7 @@ function ProcessViewButton({camundaAPI, processInstanceId}) {
 
     return (
         <>
-            <button className={`btn btn-default btn-toolbar ng-scope process-view-button ${buttonClicked ? "clicked" : ""}`} title="Toggle Quantum View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
+            <button className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Quantum View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
                 <img class="process-view-button-picture" src="https://raw.githubusercontent.com/PlanQK/workflow-modeler/master/components/bpmn-q/modeler-component/extensions/quantme/resources/QuantME_Logo.svg" />
             </button>
         </>
