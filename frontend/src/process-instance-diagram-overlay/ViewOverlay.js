@@ -31,7 +31,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let activeViewXml = response['activeProcessViewXml'];
     console.log("Active view to visualize process view overlay for: ", activeView);
 
-    // do not add overlays if executed workflow equals current view
+    // do not change xml if executed workflow equals current view
     if (!activeView.includes('view-before-rewriting')) {
         console.log("Current view equals executed workflow. No overlay required!");
         return;
@@ -71,46 +71,27 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     
     // create modeler capable of understanding the QuantME modeling constructs
     let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
-    //console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
+    console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
     let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
-    console.log(quantmeElementRegistry = quantmeModeler.get('elementRegistry'));
-    console.log(quantmeModeler.get("bpmnReplace"))
     let bpmnReplace = quantmeModeler.get("bpmnReplace");
     elementArray = viewerElementRegistry.getAll();
+
+    // get all tasks from the xml of the respective view and fire the replace event to trigger the QuantMERenderer
     for(let element of elementArray){
         console.log(element);
         if(element.type === "bpmn:Task"){
             bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
                 type: "bpmn:Task",
               });
-            console.log(element.businessObject.$attrs["quantme:quantmeTaskType"])
-
         }
     }
-    let updatedxml = await getXml(quantmeModeler);
-    viewer.importXML(activeViewXml)
+
+    // get the xml of the modeler and update the view
+    //let updatedxml = await getXml(quantmeModeler);
+    viewer.importXML(activeViewXml);
+
+    // register the events and rendering
     new QuantMERenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
-    console.log(updatedxml);
-    // get xml now and import to viewer
-
-    // export view as Svg
-    //let viewSvg = await getSvg(quantmeModeler);
-    //viewSvg = updateViewBox(viewSvg, quantmeElementRegistry)
-    //console.log('Created Svg for process view: ', viewSvg);
-
-    // add overlay to the retrieved root element
-    //overlays.add(rootElement, 'process-view-overlay', {
-      //  position: {left: 0, top: 0},
-       // html: viewSvg
-    //});
-
-    // get the currently active activities for the process instance
-    //let activeActivity = await getActiveActivities(camundaAPI, processInstanceId);
-    //console.log('Currently active activities to visualize: ', activeActivity);
-
-    // visualize process token for retrieved active activities
-    //a/ctiveActivity.forEach(activeActivity =>
-       // visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI));
 }
 
 /**
@@ -135,142 +116,6 @@ async function getActiveProcessView(camundaAPI, processInstanceId) {
     return await res.json();
 }
 
-
-/**
- * Get the currently active activities for the given process instance
- *
- * @param camundaAPI the Camunda APIs to access the backend
- * @param processInstanceId the ID of the process instance to retrieve the active activity for
- * @returns an array with currently active activities
- */
-async function getActiveActivities(camundaAPI, processInstanceId) {
-    const activityInstanceEndpoint = `/engine-rest/process-instance/${processInstanceId}/activity-instances`
-    console.log("Retrieving active activity from URL: ", activityInstanceEndpoint)
-    let res = await fetch(activityInstanceEndpoint,
-        {
-            headers: {
-                'Accept': 'application/json',
-                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
-            }
-        }
-    )
-    return (await res.json())['childActivityInstances'];
-}
-
-/**
- * Visualize the process token for the given active activity as an overlay
- *
- * @param activeActivityId the ID of the activity to visualize the process token for
- * @param overlays the set of overlays to add the visualization
- * @param quantmeElementRegistry the element registry of the process view to retrieve the coordinates for the token
- * @param viewerElementRegistry the element registry of the viewer to retrieve all required details about the active activity
- * @param rootElement the root element to use as parent for adding overlays
- * @param processInstanceId the ID of the process instance for which the process token is visualized
- * @param camundaAPI the Camunda APIs to access the backend
- */
-async function visualizeActiveActivities(activeActivityId, overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI) {
-    console.log('Visualizing process token for active activity with ID: ', activeActivityId);
-
-    // get activity from executed workflow related to given ID
-    let activeActivity = viewerElementRegistry.get(activeActivityId).businessObject;
-    console.log('Retrieved corresponding activity object: ', activeActivity);
-
-    // retrieve attributes comprising relevant information about hybrid programs
-    let activeActivityAttributes = activeActivity.$attrs;
-    console.log('Found attributes: ', activeActivityAttributes);
-
-    // handle activities related to hybrid program executions and regular activities differently
-    if (activeActivityAttributes['quantme:hybridRuntimeExecution'] !== undefined && activeActivityAttributes['quantme:hybridRuntimeExecution'] === 'true') {
-        let hybridProgramId = activeActivityAttributes['quantme:hybridProgramId']
-        console.log('Active activity belongs to hybrid program execution with ID: ', hybridProgramId);
-
-        // get current value of the variable containing the ID of the activity that is currently executed within the hybrid program
-        const variableEndpoint = `/engine-rest/process-instance/${processInstanceId}/variables/${hybridProgramId}`
-        let res = await fetch(variableEndpoint,
-            {
-                headers: {
-                    'Accept': 'application/json',
-                    "X-XSRF-TOKEN": camundaAPI.CSRFToken,
-                }
-            }
-        )
-
-        // if variable is not yet set, the hybrid program is within the queue --> add token to first activity belonging to hybrid program
-        if (!res.ok) {
-            console.log('Received following status code when retrieving variable comprising currently active activity: ', res.status);
-
-            // find the entry point for the workflow part belonging to the hybrid program
-            let entryPoints = quantmeElementRegistry.getAll().map(element => element.businessObject)
-                .filter(element => (element.$attrs['quantme:hybridRuntimeExecution'] !== undefined && element.$attrs['quantme:hybridRuntimeExecution'] === 'true')
-                    || (element.$attrs['hybridRuntimeExecution'] !== undefined && element.$attrs['hybridRuntimeExecution'] === 'true'))
-                .filter(element => (element.$attrs['quantme:hybridProgramId'] !== undefined && element.$attrs['quantme:hybridProgramId'] === hybridProgramId)
-                    || (element.$attrs['hybridProgramId'] !== undefined && element.$attrs['hybridProgramId'] === hybridProgramId));
-            console.log('Found ' + entryPoints.length + ' activities belonging to hybrid program ID: ', entryPoints);
-            entryPoints = entryPoints.filter(element => (element.$attrs['quantme:hybridProgramEntryPoint'] !== undefined && element.$attrs['quantme:hybridProgramEntryPoint'] === 'true')
-                    || (element.$attrs['hybridProgramEntryPoint'] !== undefined && element.$attrs['hybridProgramEntryPoint'] === 'true'));
-            console.log('Found ' + entryPoints.length + ' entry point for given hybrid program ID!')
-
-            // there must be exactly one entry point
-            if (entryPoints.length !== 1) {
-                console.error('There must be exactly one entry point for the hybrid program!');
-                return;
-            }
-            let entryPoint = entryPoints[0];
-            console.log('Found entry point to add process token: ', entryPoint);
-
-            // add overlay to the retrieved root element
-            entryPoint = quantmeElementRegistry.get(entryPoint.id);
-            overlays.add(rootElement, 'process-view-overlay', {
-                position: {left: entryPoint.x - 10, top: entryPoint.y + entryPoint.height - 10},
-                html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
-            });
-        } else {
-            // add token to retrieved activity
-            let result = await res.json();
-            console.log('Currently active activity within hybrid program has ID: ', result['value']);
-
-            // search the corresponding activity in the process view
-            let activityInView = quantmeElementRegistry.get(result['value']);
-            console.log('Found activity with given ID in process view: ', activityInView);
-
-            // add overlay to the retrieved root element
-            overlays.add(rootElement, 'process-view-overlay', {
-                position: {left: activityInView.x - 10, top: activityInView.y + activityInView.height - 10},
-                html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
-            });
-        }
-    } else{
-        // if activity is not part of a hybrid program execution it was not changed during rewrite and an activity with the same ID is part of the process view
-        console.log('Active activity is regular activity of the executed workflow. Adding process token...');
-        let activityInView = quantmeElementRegistry.get(activeActivityId);
-        console.log('Found activity with same ID in process view: ', activityInView);
-
-        // add overlay to the retrieved root element
-        overlays.add(rootElement, 'process-view-overlay', {
-            position: {left: activityInView.x - 10, top: activityInView.y + activityInView.height - 10},
-            html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
-        });
-    }
-}
-
-/**
- * Get the Svg representing the diagram in the given modeler
- *
- * @param modeler the modeler to retrieve the Svg for
- * @returns the exported Svg
- */
-async function getSvg(modeler) {
-    function saveSvgWrapper() {
-        return new Promise((resolve) => {
-            modeler.saveSVG((err, successResponse) => {
-                resolve(successResponse);
-            });
-        });
-    }
-
-    return await saveSvgWrapper();
-}
-
 async function getXml(modeler) {
     console.log(modeler)
    function saveXmlWrapper() {
@@ -282,110 +127,6 @@ async function getXml(modeler) {
    }
 
    return await saveXmlWrapper();
-}
-
-/**
- * Update the viewbox of the given Svg to properly display the contained BPMN diagram
- *
- * @param svg an Svg to update the viewbox for, which is wrongly set by the modeler on export
- * @param elementRegistry the element registry to access all elements within the diagram the Svg belongs to
- * @returns the Svg with the updated viewbox
- */
-function updateViewBox(svg, elementRegistry) {
-
-    // search for the modeling elements with the minimal and maximal x and y values
-    let result = {};
-    let elements = elementRegistry.getAll().filter(element => element.type !== 'bpmn:Process');
-    console.log('Updating view box using the following elements: ', elements);
-    for (let i = 0; i < elements.length; i++) {
-        let element = elements[i];
-        console.log('Checking element: ', element);
-
-        // for sequence flows check the position of each waypoint and label
-        if (element.type === 'bpmn:SequenceFlow') {
-            if (element.waypoints) {
-                for (let j = 0; j < element.waypoints.length; j++) {
-                    let waypoint = element.waypoints[j];
-
-                    if (result.minX === undefined || result.minX > waypoint.x) {
-                        result.minX = waypoint.x;
-                    }
-
-                    if (result.minY === undefined || result.minY > waypoint.y) {
-                        result.minY = waypoint.y;
-                    }
-
-                    if (result.maxX === undefined || result.maxX < waypoint.x) {
-                        result.maxX = waypoint.x;
-                    }
-
-                    if (result.maxY === undefined || result.maxY < waypoint.y) {
-                        result.maxY = waypoint.y;
-                    }
-                }
-            }
-        } else {
-
-            // handle non sequence flow elements
-            result = updateViewBoxCoordinates(result, element);
-        }
-
-        // handle labels attached to arbitrary elements
-        if (element.labels) {
-            for (let j = 0; j < element.labels.length; j++) {
-                result = updateViewBoxCoordinates(result, element.labels[j]);
-            }
-        }
-    }
-
-    console.log('Maximum x value for candidate: ', result.maxX);
-    console.log('Maximum y value for candidate: ', result.maxY);
-
-    let width, height;
-    if (result.maxX === undefined || result.maxY === undefined) {
-        console.log('Error: unable to find modeling element with minimum and maximum x and y values!');
-
-        // default values in case an error occurred
-        width = 1000;
-        height = 1000;
-    } else {
-
-        // calculate view box and add a margin of 10 to the min/max values
-        width = result.maxX + 1000;
-        height = result.maxY + 1000;
-    }
-
-    return svg.replace('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="0" height="0" viewBox="0 0 0 0" version="1.1">',
-        '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" version="1.1">');
-}
-
-/**
- * Update the view box coordinates with the coordinates of the given element if they provide higher/lower values for max/min
- *
- * @param coordindates the current view box coordinates, i.e., the min/max for x and y
- * @param element the element to check if it provides new coordinates for the view box
- * @return the updated view box coordinates
- */
-function updateViewBoxCoordinates(coordindates, element) {
-
-    if (coordindates.minX === undefined || coordindates.minX > element.x) {
-        coordindates.minX = element.x;
-    }
-
-    if (coordindates.minY === undefined || coordindates.minY > element.y) {
-        coordindates.minY = element.y;
-    }
-
-    // max x and y also incorporate the width of the current element
-    if (coordindates.maxX === undefined || coordindates.maxX < element.x + element.width) {
-        coordindates.maxX = element.x + element.width;
-    }
-
-    if (coordindates.maxY === undefined || coordindates.maxY < element.y + element.height) {
-        coordindates.maxY = element.y + element.height;
-    }
-
-    return coordindates;
 }
 
 /**
@@ -409,7 +150,6 @@ async function createQuantmeModelerFromXml(xml) {
     }
 
     await importXmlWrapper(xml);
-
     return bpmnModeler;
 }
 
