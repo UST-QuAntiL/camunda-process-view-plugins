@@ -26,24 +26,37 @@ import { queryAll as domQueryAll } from "min-dom";
 /**
  * This class extends the default BPMNRenderer to render the newly introduced QuantME task types
  */
-export default class QuantMERenderer extends BpmnRenderer {
-  constructor(
-    config,
-    eventBus,
-    styles,
-    pathMap,
-    quantMEPathMap,
-    canvas,
-    textRenderer
-  ) {
-    super(config, eventBus, styles, pathMap, canvas, textRenderer, 1001);
+export default class QuantMERenderer {
+  constructor(eventBus, styles, bpmnRenderer, textRenderer, canvas) {
+    eventBus.on(['render.shape'], 10000000000000, (evt, context) => {
+      const type = evt.type;
+      const element = context.element;
+      const parentGfx = context.gfx;
+      console.log(element);
+
+      if (element.type === "bpmn:Task") {
+        if (type === 'render.shape') {
+          console.log("render new")
+          let task = bpmnRenderer.drawShape(parentGfx, element);
+          let attrs = element.businessObject.$attrs;
+          if (attrs !== undefined) {
+            let type = attrs["quantme:quantmeTaskType"];
+            console.log(type);
+            if (type !== undefined) {
+              drawTaskSVG(parentGfx, type, null, true);
+            }
+            return task;
+          }
+        }
+      }
+    });
 
     var computeStyle = styles.computeStyle;
 
-    var defaultFillColor = config && config.defaultFillColor,
-      defaultStrokeColor = config && config.defaultStrokeColor;
+    var defaultFillColor = "white",
+      defaultStrokeColor = "white";
 
-    function drawTaskSVG(parentGfx, iconID) {
+    function drawTaskSVG(parentGfx, iconID, svgAttributes, foreground) {
       var importsvg = getQuantMESVG(iconID);
       var innerSVGstring = importsvg.svg;
       var transformDef = importsvg.transform;
@@ -327,7 +340,7 @@ export default class QuantMERenderer extends BpmnRenderer {
       },
       [consts.RESULT_EVALUATION_TASK]: function (self, parentGfx, element) {
         var task = self.renderer("bpmn:Task")(parentGfx, element);
-        setTimeout(function () {}, 10000);
+        setTimeout(function () { }, 10000);
         drawTaskSVG(parentGfx, "TASK_TYPE_RESULT_EVALUATION");
         return task;
       },
@@ -431,11 +444,11 @@ export default class QuantMERenderer extends BpmnRenderer {
 }
 
 QuantMERenderer.$inject = [
-  "config",
   "eventBus",
   "styles",
+  "bpmnRenderer",
+  "textRenderer",
+  "canvas",
   "pathMap",
   "quantMEPathMap",
-  "canvas",
-  "textRenderer",
 ];

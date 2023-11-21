@@ -18,6 +18,7 @@ import quantMEModdleExtension from './quantum4bpmn.json';
 import openTOSCAModdleExtension from './opentosca4bpmn.json';
 import quantMEModule from './quantme';
 import openTOSCAModule from './opentosca';
+import QuantMERenderer from './quantme/QuantMERenderer';
 
 export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log('Rendering view overlay using viewer: ', viewer)
@@ -37,7 +38,8 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     }
 
     // get element registry and overlays to retrieve elements and attach new overlays to them
-    let overlays = viewer.get("overlays")
+    let overlays = viewer.get("overlays");
+    let canvas = viewer.get("canvas");
     let viewerElementRegistry = viewer.get("elementRegistry")
     console.log("Successfully prepared viewer to add overlay!");
 
@@ -79,12 +81,16 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
         console.log(element);
         if(element.type === "bpmn:Task"){
             bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-                type: element.businessObject.$attrs['quantme:quantmeTaskType'],
+                type: "bpmn:Task",
               });
             console.log(element.businessObject.$attrs["quantme:quantmeTaskType"])
 
         }
     }
+    let updatedxml = await getXml(quantmeModeler);
+    viewer.importXML(activeViewXml)
+    new QuantMERenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
+    console.log(updatedxml);
     // get xml now and import to viewer
 
     // export view as Svg
@@ -128,6 +134,7 @@ async function getActiveProcessView(camundaAPI, processInstanceId) {
     )
     return await res.json();
 }
+
 
 /**
  * Get the currently active activities for the given process instance
@@ -262,6 +269,19 @@ async function getSvg(modeler) {
     }
 
     return await saveSvgWrapper();
+}
+
+async function getXml(modeler) {
+    console.log(modeler)
+   function saveXmlWrapper() {
+       return new Promise((resolve) => {
+           modeler.saveXML((err, successResponse) => {
+               resolve(successResponse);
+           });
+       });
+   }
+
+   return await saveXmlWrapper();
 }
 
 /**
