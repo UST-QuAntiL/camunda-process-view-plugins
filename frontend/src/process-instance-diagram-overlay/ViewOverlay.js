@@ -62,13 +62,30 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
     console.log(viewer.get("canvas"))
     viewer.importXML(activeViewXml)
+    viewerElementRegistry = viewer.get("elementRegistry")
     elementArray = viewerElementRegistry.getAll();
     console.log('Diagram contains the following elements: ', elementArray);
+
     
     // create modeler capable of understanding the QuantME modeling constructs
-    //let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
+    let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
     //console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
-    //let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
+    let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
+    console.log(quantmeElementRegistry = quantmeModeler.get('elementRegistry'));
+    console.log(quantmeModeler.get("bpmnReplace"))
+    let bpmnReplace = quantmeModeler.get("bpmnReplace");
+    elementArray = viewerElementRegistry.getAll();
+    for(let element of elementArray){
+        console.log(element);
+        if(element.type === "bpmn:Task"){
+            bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+                type: element.businessObject.$attrs['quantme:quantmeTaskType'],
+              });
+            console.log(element.businessObject.$attrs["quantme:quantmeTaskType"])
+
+        }
+    }
+    // get xml now and import to viewer
 
     // export view as Svg
     //let viewSvg = await getSvg(quantmeModeler);
