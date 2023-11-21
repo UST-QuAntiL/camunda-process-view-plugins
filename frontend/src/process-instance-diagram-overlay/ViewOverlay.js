@@ -40,7 +40,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     // get element registry and overlays to retrieve elements and attach new overlays to them
     let overlays = viewer.get("overlays");
     let canvas = viewer.get("canvas");
-    let viewerElementRegistry = viewer.get("elementRegistry")
+    let viewerElementRegistry = viewer.get("elementRegistry");
     console.log("Successfully prepared viewer to add overlay!");
 
     // get the flow element representing the whole BPMN plane
