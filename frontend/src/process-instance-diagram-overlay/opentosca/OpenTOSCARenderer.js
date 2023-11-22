@@ -46,9 +46,6 @@ const STROKE_STYLE = {
 };
 
 async function loadTopology(deploymentModelUrl) {
-  if (deploymentModelUrl.startsWith('{{ wineryEndpoint }}')) {
-      deploymentModelUrl = deploymentModelUrl.replace('{{ wineryEndpoint }}', config.getWineryEndpoint());
-  }
   let topology;
   let tags;
   try {
