@@ -84,6 +84,11 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
                 type: "bpmn:Task",
               });
         }
+        if(element.type === "bpmn:DataObjectReference"){
+            bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+                type: "bpmn:DataObjectReference",
+              });
+        }
     }
 
     // get the xml of the modeler and update the view
