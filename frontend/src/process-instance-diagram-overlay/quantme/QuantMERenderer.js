@@ -49,12 +49,46 @@ export default class QuantMERenderer {
           }
         }
       }
+
+      if (element.type === "bpmn:DataObjectReference") {
+        if (type === 'render.shape') {
+          console.log("render new")
+          let task = bpmnRenderer.drawShape(parentGfx, element);
+          let attrs = element.businessObject.$attrs;
+          if (attrs !== undefined) {
+            let type = attrs["quantmeTaskType"];
+            console.log(type);
+            if (type !== undefined) {
+              drawDataObjectSVG(parentGfx, type, null, true);
+            }
+            return task;
+          }
+        }
+      }
+
     });
 
     var computeStyle = styles.computeStyle;
 
     var defaultFillColor = "white",
       defaultStrokeColor = "white";
+
+    function drawDataObjectSVG(parentGfx, iconID) {
+      let importsvg = getQuantMESVG(iconID);
+      let innerSVGstring = importsvg.svg;
+      let transformDef = importsvg.transform;
+
+      const groupDef = svgCreate("g");
+      svgAttr(groupDef, { transform: transformDef });
+      innerSVG(groupDef, innerSVGstring);
+      let pathElement = parentGfx.querySelector("path");
+      let existingCssText = pathElement.style.cssText;
+      pathElement.style.cssText =
+        existingCssText + " fill-opacity: 0 !important;";
+
+      // draw svg in the background
+      parentGfx.prepend(groupDef);
+    }
 
     function drawTaskSVG(parentGfx, iconID, svgAttributes, foreground) {
       var importsvg = getQuantMESVG(iconID);
