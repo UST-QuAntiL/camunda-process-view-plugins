@@ -24,7 +24,7 @@ import {
   prepend as svgPrepend,
   innerSVG
 } from 'tiny-svg';
-import {query as domQuery} from 'min-dom';
+import { query as domQuery } from 'min-dom';
 import { getQuantMESVG } from "./QuantMESVGMap";
 
 const HIGH_PRIORITY = 14001;
@@ -49,266 +49,266 @@ async function loadTopology(deploymentModelUrl) {
   let topology;
   let tags;
   try {
-      topology = await fetch(deploymentModelUrl.replace('?csar', 'topologytemplate'),
-          {headers: {"Accept": "application/json"}})
-          .then(res => res.json());
-      tags = await fetch(deploymentModelUrl.replace('?csar', 'tags'),
-          {headers: {"Accept": "application/json"}})
-          .then(res => res.json());
+    topology = await fetch(deploymentModelUrl.replace('?csar', 'topologytemplate'),
+      { headers: { "Accept": "application/json" } })
+      .then(res => res.json());
+    tags = await fetch(deploymentModelUrl.replace('?csar', 'tags'),
+      { headers: { "Accept": "application/json" } })
+      .then(res => res.json());
 
   } catch (e) {
-      throw new Error('An unexpected error occurred during loading the deployments models topology.');
+    throw new Error('An unexpected error occurred during loading the deployments models topology.');
   }
   let topNode;
   const topNodeTag = tags.find(tag => tag.name === "top-node");
   if (topNodeTag) {
-      const topNodeId = topNodeTag.value;
-      topNode = topology.nodeTemplates.find(nodeTemplate => nodeTemplate.id === topNodeId);
-      if (!topNode) {
-          throw new Error(`Top level node "${topNodeId}" not found.`);
-      }
+    const topNodeId = topNodeTag.value;
+    topNode = topology.nodeTemplates.find(nodeTemplate => nodeTemplate.id === topNodeId);
+    if (!topNode) {
+      throw new Error(`Top level node "${topNodeId}" not found.`);
+    }
   } else {
-      let nodes = new Map(topology.nodeTemplates.map(nodeTemplate => [nodeTemplate.id, nodeTemplate]));
-      for (let relationship of topology.relationshipTemplates) {
-          if (relationship.name === "HostedOn") {
-              nodes.delete(relationship.targetElement.ref);
-          }
+    let nodes = new Map(topology.nodeTemplates.map(nodeTemplate => [nodeTemplate.id, nodeTemplate]));
+    for (let relationship of topology.relationshipTemplates) {
+      if (relationship.name === "HostedOn") {
+        nodes.delete(relationship.targetElement.ref);
       }
-      if (nodes.size === 1) {
-          topNode = nodes.values().next().value;
-      }
+    }
+    if (nodes.size === 1) {
+      topNode = nodes.values().next().value;
+    }
   }
   if (!topNode) {
-      throw new Error("No top level node found.");
+    throw new Error("No top level node found.");
   }
 
   return {
-      topNode,
-      nodeTemplates: topology.nodeTemplates,
-      relationshipTemplates: topology.relationshipTemplates
+    topNode,
+    nodeTemplates: topology.nodeTemplates,
+    relationshipTemplates: topology.relationshipTemplates
   };
 }
 
 function drawTaskSVG(parentGfx, importSVG, svgAttributes, foreground) {
   const innerSvgStr = importSVG.svg,
-      transformDef = importSVG.transform;
+    transformDef = importSVG.transform;
 
   const groupDef = svgCreate('g');
-  svgAttr(groupDef, {transform: transformDef});
+  svgAttr(groupDef, { transform: transformDef });
   innerSVG(groupDef, innerSvgStr);
 
   if (!foreground) {
-      // set task box opacity to 0 such that icon can be in the background
-      svgAttr(svgSelect(parentGfx, 'rect'), {'fill-opacity': 0});
+    // set task box opacity to 0 such that icon can be in the background
+    svgAttr(svgSelect(parentGfx, 'rect'), { 'fill-opacity': 0 });
   }
 
   if (svgAttributes) {
-      svgAttr(groupDef, svgAttributes);
+    svgAttr(groupDef, svgAttributes);
   }
 
   if (foreground) {
-      parentGfx.append(groupDef);
+    parentGfx.append(groupDef);
   } else {
-      parentGfx.prepend(groupDef);
+    parentGfx.prepend(groupDef);
   }
   return groupDef;
 }
 
 export default class OpenTOSCARenderer {
   constructor(eventBus, styles, bpmnRenderer, textRenderer, canvas) {
-      eventBus.on(['render.shape'], HIGH_PRIORITY, (evt, context) => {
-          const type = evt.type;
-          const element = context.element;
-          const parentGfx = context.gfx;
+    eventBus.on(['render.shape'], HIGH_PRIORITY, (evt, context) => {
+      const type = evt.type;
+      const element = context.element;
+      const parentGfx = context.gfx;
 
-          if (element.type === SERVICE_TASK_TYPE) {
-              if (type === 'render.shape') {
-                  let task = bpmnRenderer.drawShape(parentGfx, element);
-                  this.addSubprocessView(parentGfx, element, bpmnRenderer);
-                  this.showDeploymentModel(parentGfx, element);
-                  //(parentGfx, getQuantMESVG("TASK_TYPE_RESULT_COMBINATION"), null, true);
-                  return task;
-              }
-          }
-          if (element.type === "bpmn:Task") {
-            if (type === 'render.shape') {
-                let task = bpmnRenderer.drawShape(parentGfx, element);
-                drawTaskSVG(parentGfx, getQuantMESVG("TASK_TYPE_RESULT_COMBINATION"), null, true);
-                return task;
-            }
+      if (element.type === SERVICE_TASK_TYPE) {
+        if (type === 'render.shape') {
+          let task = bpmnRenderer.drawShape(parentGfx, element);
+          this.addSubprocessView(parentGfx, element, bpmnRenderer);
+          this.showDeploymentModel(parentGfx, element);
+          //(parentGfx, getQuantMESVG("TASK_TYPE_RESULT_COMBINATION"), null, true);
+          return task;
         }
-      });
+      }
+      if (element.type === "bpmn:Task") {
+        if (type === 'render.shape') {
+          let task = bpmnRenderer.drawShape(parentGfx, element);
+          drawTaskSVG(parentGfx, getQuantMESVG("TASK_TYPE_RESULT_COMBINATION"), null, true);
+          return task;
+        }
+      }
+    });
 
-      this.styles = styles;
-      this.textRenderer = textRenderer;
-      this.eventBus = eventBus;
+    this.styles = styles;
+    this.textRenderer = textRenderer;
+    this.eventBus = eventBus;
 
-      this.addMarkerDefinition(canvas);
-      this.currentlyShownDeploymentsModels = new Map();
+    this.addMarkerDefinition(canvas);
+    this.currentlyShownDeploymentsModels = new Map();
   }
 
   addMarkerDefinition(canvas) {
-      const marker = svgCreate('marker', {
-          id: DEPLOYMENT_REL_MARKER_ID,
-          viewBox: '0 0 8 8',
-          refX: 8,
-          refY: 4,
-          markerWidth: 8,
-          markerHeight: 8,
-          orient: 'auto'
-      });
-      svgAppend(marker, svgCreate('path', {
-          d: 'M 0 0 L 8 4 L 0 8',
-          ...this.styles.computeStyle({}, ['no-fill'], {
-              ...STROKE_STYLE,
-              strokeWidth: 1,
-              strokeDasharray: 2
-          })
-      }));
+    const marker = svgCreate('marker', {
+      id: DEPLOYMENT_REL_MARKER_ID,
+      viewBox: '0 0 8 8',
+      refX: 8,
+      refY: 4,
+      markerWidth: 8,
+      markerHeight: 8,
+      orient: 'auto'
+    });
+    svgAppend(marker, svgCreate('path', {
+      d: 'M 0 0 L 8 4 L 0 8',
+      ...this.styles.computeStyle({}, ['no-fill'], {
+        ...STROKE_STYLE,
+        strokeWidth: 1,
+        strokeDasharray: 2
+      })
+    }));
 
-      let defs = domQuery('defs', canvas._svg);
-      if (!defs) {
-          defs = svgCreate('defs');
+    let defs = domQuery('defs', canvas._svg);
+    if (!defs) {
+      defs = svgCreate('defs');
 
-          svgPrepend(canvas._svg, defs);
-      }
-      svgAppend(defs, marker);
+      svgPrepend(canvas._svg, defs);
+    }
+    svgAppend(defs, marker);
   }
 
   addSubprocessView(parentGfx, element, bpmnRenderer) {
-      let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
-      if (!deploymentModelUrl) return;
+    let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
+    if (!deploymentModelUrl) return;
 
-      let groupDef = svgCreate('g');
-      
-      svgAppend(parentGfx, svgCreate("path", {
-        d: "M -260 -110 L 360 -110 L 360 -10   L 55 -10   L 50 -5  L 45 -10  L -260 -10 Z",
-        fill: "white",
-        stroke: "#777777",
-        "pointer-events": "all"
+    let groupDef = svgCreate('g');
+
+    svgAppend(parentGfx, svgCreate("path", {
+      d: "M -260 -110 L 360 -110 L 360 -10   L 55 -10   L 50 -5  L 45 -10  L -260 -10 Z",
+      fill: "white",
+      stroke: "#777777",
+      "pointer-events": "all"
     }));
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${-238}, ${-78})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          type: 'bpmn:StartEvent',
-          height: 36,
-          width: 36,
-          businessObject: {
-              isInterrupting: true
-          }
-      });
-      svgAppend(parentGfx, groupDef);
-      bpmnRenderer.drawConnection(parentGfx, {
-          ...element,
-          type: 'bpmn:SequenceFlow',
-          businessObject: {},
-          waypoints: [
-              {x: -200, y: -60},
-              {x: -150, y: -60},
-          ]
-      });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${-238}, ${-78})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:StartEvent',
+      height: 36,
+      width: 36,
+      businessObject: {
+        isInterrupting: true
+      }
+    });
+    svgAppend(parentGfx, groupDef);
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: -200, y: -60 },
+        { x: -150, y: -60 },
+      ]
+    });
 
 
-      groupDef = svgCreate('g');
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${-150}, ${-100})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          type: 'bpmn:ScriptTask',
-          businessObject: {
-              "name": "Create deployment"
-          }
-      });
-      svgAppend(parentGfx, groupDef);
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${-150}, ${-100})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ScriptTask',
+      businessObject: {
+        "name": "Create deployment"
+      }
+    });
+    svgAppend(parentGfx, groupDef);
 
-      bpmnRenderer.drawConnection(parentGfx, {
-          ...element,
-          type: 'bpmn:SequenceFlow',
-          businessObject: {},
-          waypoints: [
-              {x: -50, y: -60},
-              {x: 0, y: -60},
-          ]
-      });
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: -50, y: -60 },
+        { x: 0, y: -60 },
+      ]
+    });
 
-      groupDef = svgCreate('g');
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${0}, ${-100})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          type: 'bpmn:ScriptTask',
-          businessObject: {
-              "name": "Wait for deployment"
-          }
-      });
-      svgAppend(parentGfx, groupDef);
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${0}, ${-100})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ScriptTask',
+      businessObject: {
+        "name": "Wait for deployment"
+      }
+    });
+    svgAppend(parentGfx, groupDef);
 
-      bpmnRenderer.drawConnection(parentGfx, {
-          ...element,
-          type: 'bpmn:SequenceFlow',
-          businessObject: {},
-          waypoints: [
-              {x: 100, y: -60},
-              {x: 150, y: -60},
-          ]
-      });
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: 100, y: -60 },
+        { x: 150, y: -60 },
+      ]
+    });
 
-      groupDef = svgCreate('g');
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${150}, ${-100})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          type: 'bpmn:ServiceTask',
-          businessObject: {
-              "name": "Call service"
-          }
-      });
-      svgAppend(parentGfx, groupDef);
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${150}, ${-100})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ServiceTask',
+      businessObject: {
+        "name": "Call service"
+      }
+    });
+    svgAppend(parentGfx, groupDef);
 
-      bpmnRenderer.drawConnection(parentGfx, {
-          ...element,
-          type: 'bpmn:SequenceFlow',
-          businessObject: {},
-          waypoints: [
-              {x: 250, y: -60},
-              {x: 300, y: -60},
-          ]
-      });
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: 250, y: -60 },
+        { x: 300, y: -60 },
+      ]
+    });
 
-      groupDef = svgCreate('g');
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${301}, ${-78})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          height: 36,
-          width: 36,
-          type: 'bpmn:EndEvent',
-          businessObject: {}
-      });
-      svgAppend(parentGfx, groupDef);
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${301}, ${-78})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      height: 36,
+      width: 36,
+      type: 'bpmn:EndEvent',
+      businessObject: {}
+    });
+    svgAppend(parentGfx, groupDef);
 
   }
 
   showOrDeleteDeploymentModel(parentGfx, element) {
     if (element.showDeploymentModel) {
-        this.showDeploymentModel(parentGfx, element);
+      this.showDeploymentModel(parentGfx, element);
     } else {
-        this.removeDeploymentModel(parentGfx, element);
+      this.removeDeploymentModel(parentGfx, element);
     }
-}
+  }
 
   async showDeploymentModel(parentGfx, element) {
     let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
-      if (!deploymentModelUrl) return;
-      const button = drawTaskSVG(parentGfx, {
-          transform: 'matrix(0.3, 0, 0, 0.3, 85, 65)',
-          svg: buttonIcon
-      }, null, true);
-      button.style['pointer-events'] = 'all';
-      button.style['cursor'] = 'pointer';
-      button.addEventListener('click', (e) => {
-          e.preventDefault();
-          element.deploymentModelTopology = undefined;
-          element.showDeploymentModel = !element.showDeploymentModel;
-          this.showOrDeleteDeploymentModel(parentGfx, element);
-      });
-    
+    if (!deploymentModelUrl) return;
+    const button = drawTaskSVG(parentGfx, {
+      transform: 'matrix(0.3, 0, 0, 0.3, 85, 65)',
+      svg: buttonIcon
+    }, null, true);
+    button.style['pointer-events'] = 'all';
+    button.style['cursor'] = 'pointer';
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      element.deploymentModelTopology = undefined;
+      element.showDeploymentModel = !element.showDeploymentModel;
+      this.showOrDeleteDeploymentModel(parentGfx, element);
+    });
+
     const groupDef = svgCreate("g", { id: DEPLOYMENT_GROUP_ID });
     parentGfx.append(groupDef);
 
@@ -317,6 +317,10 @@ export default class OpenTOSCARenderer {
 
     let ySubtract = parseInt(topNode.y);
     let xSubtract = parseInt(topNode.x);
+    let xMin = 0;
+    let xMax = 0;
+    let yMax = 0;
+
 
     const positions = new Map();
     for (let nodeTemplate of nodeTemplates) {
@@ -325,10 +329,20 @@ export default class OpenTOSCARenderer {
         y: (parseInt(nodeTemplate.y) - ySubtract) / 1.4,
       };
 
+      if (position.x < xMin) {
+        xMin = position.x;
+      }
+      if (position.x > xMax) {
+        xMax = position.x;
+      }
+      if (position.y > yMax) {
+        yMax = position.y;
+      }
       positions.set(nodeTemplate.id, position);
       if (nodeTemplate.id !== topNode.id) {
         this.drawNodeTemplate(groupDef, nodeTemplate, position);
       }
+
     }
     const boundingBox = {
       left: Math.min(...[...positions.values()].map((p) => p.x)) + element.x,
@@ -353,6 +367,16 @@ export default class OpenTOSCARenderer {
       relationshipTemplates,
       positions
     );
+    this.drawTopologyOverlay(parentGfx, xMin - NODE_SHIFT_MARGIN / 2, xMax + NODE_WIDTH + NODE_SHIFT_MARGIN / 2, yMax + NODE_HEIGHT + NODE_SHIFT_MARGIN / 2);
+  }
+
+  drawTopologyOverlay(parentGfx, xMin, xMax, yMax) {
+    svgPrepend(parentGfx, svgCreate("path", {
+      d: `M 0 ${80 - NODE_SHIFT_MARGIN} L ${xMax.toFixed(2)} ${80 - NODE_SHIFT_MARGIN} L ${xMax.toFixed(2)} ${yMax.toFixed(2)}   L ${xMin.toFixed(2)} ${yMax.toFixed(2)}   L ${xMin.toFixed(2)} ${80 - NODE_SHIFT_MARGIN}  L 0 ${80 - NODE_SHIFT_MARGIN}  Z`,
+      fill: "white",
+      stroke: "#777777",
+      "pointer-events": "all"
+    }));
   }
 
   drawNodeConnections(
@@ -541,8 +565,8 @@ export default class OpenTOSCARenderer {
           connection.source
         ),
         getSimpleDirection(connection.sourceLocation) +
-          ":" +
-          getSimpleDirection(connection.targetLocation)
+        ":" +
+        getSimpleDirection(connection.targetLocation)
       );
 
       const line = createLine(
@@ -586,7 +610,7 @@ export default class OpenTOSCARenderer {
       parentGfx.prepend(line);
     }
   }
-  
+
   removeDeploymentModel(parentGfx, element) {
     this.currentlyShownDeploymentsModels.delete(element.id);
     const group = svgSelect(parentGfx, "#" + DEPLOYMENT_GROUP_ID);
