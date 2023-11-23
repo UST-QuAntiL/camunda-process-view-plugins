@@ -72,10 +72,10 @@ function ProcessViewButton({ camundaAPI, processInstanceId }) {
     return (
         <>
             <button className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Quantum View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
-                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/PlanQK/workflow-modeler/master/components/bpmn-q/modeler-component/extensions/quantme/resources/QuantME_Logo.svg" />
+                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/LaviniaStiliadou/camunda-process-views-plugin/feature/remove-overlays/frontend/resources/QuantumViewIcon.svg" />
             </button>
             <button className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Deployment View" onClick={() => triggerDeployment()} tooltip-placement="left">
-                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/PlanQK/workflow-modeler/feature/policies/components/bpmn-q/modeler-component/extensions/opentosca/resources/deployment_policy_palette.svg" />
+                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/LaviniaStiliadou/camunda-process-views-plugin/feature/remove-overlays/frontend/resources/DeploymentViewIcon.svg" />
             </button>
         </>
     );
