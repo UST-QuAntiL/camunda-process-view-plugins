@@ -164,7 +164,7 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
 
     const selectedElement = document.querySelector(selector);
     console.log(selectedElement)
-    let top = viewerElementRegistry.get(activeActivityId).y + viewerElementRegistry.get(activeActivityId).height + 13;
+    let top = viewerElementRegistry.get(activeActivityId).y + viewerElementRegistry.get(activeActivityId).height + 11;
     let x = viewerElementRegistry.get(activeActivityId).x;
 
     if (selectedElement) {

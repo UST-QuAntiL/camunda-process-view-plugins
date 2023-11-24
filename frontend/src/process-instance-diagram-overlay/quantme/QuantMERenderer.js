@@ -32,7 +32,7 @@ export default class QuantMERenderer {
       const parentGfx = context.gfx;
       console.log(element);
 
-      if (element.type === "bpmn:Task") {
+      if (element.type === "bpmn:Task" || element.type === "bpmn:SubProcess") {
         if (type === 'render.shape') {
           let task = bpmnRenderer.drawShape(parentGfx, element);
           let attrs = element.businessObject.$attrs;
@@ -45,7 +45,7 @@ export default class QuantMERenderer {
             if (type !== undefined) {
               console.log("task renderer")
               drawTaskSVG(parentGfx, type, null, true);
-              this.addOverlay(parentGfx, element, bpmnRenderer);
+              //this.addOverlay(parentGfx, element, bpmnRenderer);
             }
             return task;
           }
