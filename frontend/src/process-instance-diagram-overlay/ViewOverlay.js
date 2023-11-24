@@ -56,11 +56,6 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log('Creating overlay based on root element: ', rootElement)
 
     // add overlay to remove existing elements from the diagram
-    overlays.add(rootElement, 'background-overlay', {
-        position: {left: 0, top: 0},
-        html: '<div class="background-div"></div>'
-    });
-
     console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
     console.log(viewer.get("canvas"))
     viewer.importXML(activeViewXml)
@@ -68,7 +63,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     elementArray = viewerElementRegistry.getAll();
     console.log('Diagram contains the following elements: ', elementArray);
 
-    
+
     // create modeler capable of understanding the QuantME modeling constructs
     let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
     console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
@@ -77,27 +72,134 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     elementArray = viewerElementRegistry.getAll();
 
     // get all tasks from the xml of the respective view and fire the replace event to trigger the QuantMERenderer
-    for(let element of elementArray){
+    let parent;
+    for (let element of elementArray) {
         console.log(element);
-        if(element.type === "bpmn:Task"){
-            bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-                type: "bpmn:Task",
-              });
+        if (element.type === "bpmn:Task") {
+            parent = element.parent;
+            //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+            //  type: "bpmn:Task",
+            //});
         }
-        if(element.type === "bpmn:DataObjectReference"){
+        if (element.type === "bpmn:DataObjectReference") {
             bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
                 type: "bpmn:DataObjectReference",
-              });
+            });
+        }
+    }
+
+    for (let element of elementArray) {
+
+        console.log(element);
+        if (element.type === "bpmn:SubProcess") {
+            element.parent = parent;
+            //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+            //  type: "bpmn:SubProcess",
+            // });
         }
     }
 
     // get the xml of the modeler and update the view
     //let updatedxml = await getXml(quantmeModeler);
     viewer.importXML(activeViewXml);
+    overlays = viewer.get("overlays");
 
     // register the events and rendering
     new QuantMERenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
+
+    // get the currently active activities for the process instance
+    let activeActivity = await getActiveActivities(camundaAPI, processInstanceId);
+    console.log('Currently active activities to visualize: ', activeActivity);
+
+    // visualize process token for retrieved active activities
+    activeActivity.forEach(activeActivity =>
+        visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI));
 }
+
+/**
+ * Get the currently active activities for the given process instance
+ *
+ * @param camundaAPI the Camunda APIs to access the backend
+ * @param processInstanceId the ID of the process instance to retrieve the active activity for
+ * @returns an array with currently active activities
+ */
+async function getActiveActivities(camundaAPI, processInstanceId) {
+    const activityInstanceEndpoint = `/engine-rest/process-instance/${processInstanceId}/activity-instances`
+    console.log("Retrieving active activity from URL: ", activityInstanceEndpoint)
+    let res = await fetch(activityInstanceEndpoint,
+        {
+            headers: {
+                'Accept': 'application/json',
+                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+            }
+        }
+    )
+    return (await res.json())['childActivityInstances'];
+}
+
+/**
+ * Visualize the process token for the given active activity as an overlay
+ *
+ * @param activeActivityId the ID of the activity to visualize the process token for
+ * @param overlays the set of overlays to add the visualization
+ * @param quantmeElementRegistry the element registry of the process view to retrieve the coordinates for the token
+ * @param viewerElementRegistry the element registry of the viewer to retrieve all required details about the active activity
+ * @param rootElement the root element to use as parent for adding overlays
+ * @param processInstanceId the ID of the process instance for which the process token is visualized
+ * @param camundaAPI the Camunda APIs to access the backend
+ */
+async function visualizeActiveActivities(activeActivityId, overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI) {
+    console.log('Visualizing process token for active activity with ID: ', activeActivityId);
+
+    // get activity from executed workflow related to given ID
+    let activeActivity = viewerElementRegistry.get(activeActivityId).businessObject;
+    console.log('Retrieved corresponding activity object: ', activeActivity);
+
+    // retrieve attributes comprising relevant information about hybrid programs
+    let activeActivityAttributes = activeActivity.$attrs;
+    console.log('Found attributes: ', activeActivityAttributes);
+
+    console.log(viewerElementRegistry.get(activeActivityId));
+    const selector = `.djs-overlay-container`;
+
+    const selectedElement = document.querySelector(selector);
+    console.log(selectedElement)
+    let top = viewerElementRegistry.get(activeActivityId).y + viewerElementRegistry.get(activeActivityId).height + 13;
+    let x = viewerElementRegistry.get(activeActivityId).x;
+
+    if (selectedElement) {
+        const overlayHtml = `
+        <div class="djs-overlays" style="position: absolute;" data-container-id="${activeActivityId}">
+        <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${x}px; top: ${top}px; transform-origin: left top;"><div class="activity-bottom-left-position instances-overlay">
+  <span class="badge instance-count" data-original-title="" title="">1</span>
+  <span class="badge badge-important instance-incidents" style="display: none;"></span>
+</div></div></div>
+  `;
+
+        // Append the overlay HTML to the selected element
+        selectedElement.insertAdjacentHTML('beforeend', overlayHtml);
+    }
+    // find the entry point for the workflow part belonging to the hybrid program
+    if (activeActivityAttributes['quantme:containedElements'] !== undefined) {
+        console.log(activeActivityAttributes["quantme:containedElements"]);
+        console.log(activeActivityId)
+
+        //if(activeActivityAttributes["quantme:containedElements"].includes(activeActivityId)){
+
+        //let entryPoint = entryPoints[0];
+        // add overlay to the retrieved root element
+        let entryPoint = quantmeElementRegistry.get(activeActivityId);
+        console.log(entryPoint);
+        overlays.add(rootElement, {
+            position: { left: entryPoint.x - 10, top: entryPoint.y + entryPoint.height - 10 },
+            html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
+        });
+
+        console.log("add overlay")
+        //}
+    }
+}
+
 
 /**
  * Get the currently active process view and the corresponding Xml file from the backend
@@ -123,15 +225,15 @@ async function getActiveProcessView(camundaAPI, processInstanceId) {
 
 async function getXml(modeler) {
     console.log(modeler)
-   function saveXmlWrapper() {
-       return new Promise((resolve) => {
-           modeler.saveXML((err, successResponse) => {
-               resolve(successResponse);
-           });
-       });
-   }
+    function saveXmlWrapper() {
+        return new Promise((resolve) => {
+            modeler.saveXML((err, successResponse) => {
+                resolve(successResponse);
+            });
+        });
+    }
 
-   return await saveXmlWrapper();
+    return await saveXmlWrapper();
 }
 
 /**
