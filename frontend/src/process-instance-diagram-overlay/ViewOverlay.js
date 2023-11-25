@@ -157,8 +157,53 @@ async function getActiveTransitionActivities(camundaAPI, processInstanceId) {
 
 }
 
+// engine-rest/variable-instance?processInstanceIdIn=c7ea31a1-8ba6-11ee-bffc-0242ac110002&variableName=circuitVisualization
+
 /**
- * Get the variables from the process instance
+ * Get the variable instance id from the process instance
+ *
+ * @param camundaAPI the Camunda APIs to access the backend
+ * @param processInstanceId the ID of the process instance to retrieve the active activity for
+ * @returns an array with variables
+ */
+async function getVariableInstanceId(camundaAPI, processInstanceId, variableName) {
+    const activityInstanceEndpoint = `/engine-rest/variable-instance?processInstanceId=${processInstanceId}&variableName=${variableName}`
+    console.log("Retrieving variables from URL: ", activityInstanceEndpoint)
+    let res = await fetch(activityInstanceEndpoint,
+        {
+            headers: {
+                'Accept': 'application/json',
+                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+            }
+        }
+    )
+    return (await res.json())[0].id;
+}
+
+/**
+ * Get the variable instance id from the process instance
+ *
+ * @param camundaAPI the Camunda APIs to access the backend
+ * @param processInstanceId the ID of the process instance to retrieve the active activity for
+ * @returns an array with variables
+ */
+async function getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId) {
+    const activityInstanceEndpoint = `/engine-rest/variable-instance/${variableInstanceId}/data`
+    console.log("Retrieving variables from URL: ", activityInstanceEndpoint)
+    let res = await fetch(activityInstanceEndpoint,
+        {
+            headers: {
+                'Accept': 'application/json',
+                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+            }
+        }
+    )
+    return (await res.url);
+}
+
+
+/**
+ * Get the variable instance id from the process instance
  *
  * @param camundaAPI the Camunda APIs to access the backend
  * @param processInstanceId the ID of the process instance to retrieve the active activity for
@@ -175,8 +220,9 @@ async function getVariables(camundaAPI, processInstanceId) {
             }
         }
     )
-    return await res.json();
+    return (await res.json());
 }
+
 
 /**
  * Visualize the process token for the given active activity as an overlay
@@ -213,7 +259,7 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
     console.log(variables)
 
     let variablesToDisplay = [];
-    for(let element of elementArray) {
+    for (let element of elementArray) {
         console.log("get extensionElements");
         console.log(element);
         if (element.type === "bpmn:ServiceTask" && activeActivityId === element.id) {
@@ -221,21 +267,21 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
             let extensionElements = element.businessObject.extensionElements.values;
             console.log("the extensionelements are:", extensionElements);
 
-            for(let extensionElement of extensionElements) {
+            for (let extensionElement of extensionElements) {
                 console.log(extensionElement);
-                
+
                 // requires to retrieve the children
-                if(extensionElement.$type === "camunda:connector") {
-                    for(let children of extensionElement.$children) {
+                if (extensionElement.$type === "camunda:connector") {
+                    for (let children of extensionElement.$children) {
                         console.log(children);
-                        if(children.$type === "camunda:inputOutput"){
-                            for(let inoutParam of children.$children) {
-                                if(inoutParam.$type === "camunda:outputParameter") {
+                        if (children.$type === "camunda:inputOutput") {
+                            for (let inoutParam of children.$children) {
+                                if (inoutParam.$type === "camunda:outputParameter") {
                                     variablesToDisplay.push(inoutParam.name);
                                 }
                             }
                         }
-                        if(children.$type === "camunda:outputParameter") {
+                        if (children.$type === "camunda:outputParameter") {
                             variablesToDisplay.push(children.name);
                         }
                     }
@@ -246,11 +292,27 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
     }
 
     // Generate the variable text for overlay
-    
-    let variableText = variablesToDisplay.map(variableName => {const variableValue = variables[variableName].value;
-        const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
-        return `${variableName}: ${formattedValue}`}).join('<br>');
+    let fileVariables = [];
+    let variableText = variablesToDisplay.map(variableName => {
+        const variable = variables[variableName];
+        const variableValue = variable.value;
+        const variableType = variable.type;
+        console.log(variableType);
+        if (variableType !== "File") {
+            const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
+            return `${variableName}: ${formattedValue}`
+        } else {
+            fileVariables.push(variableName);
+        }
+    }).join('<br>');
 
+    for (let fileVariable of fileVariables) {
+        console.log("----fileVariable")
+        let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
+        let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
+        console.log(value);
+        variableText = variableText + '<br>'+ (`${fileVariable}: <img class="process-view-button-picture" src=${value} />`)
+    }
 
 
     if (selectedElement) {
