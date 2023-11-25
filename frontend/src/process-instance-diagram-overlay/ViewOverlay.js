@@ -116,6 +116,12 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let activeActivity = await getActiveActivities(camundaAPI, processInstanceId);
     console.log('Currently active activities to visualize: ', activeActivity);
 
+    // if the workflow contains loops, transition activities can hold the active activity
+    if (activeActivity.length === 0) {
+        activeActivity = await getActiveTransitionActivities(camundaAPI, processInstanceId);
+    }
+    console.log('Currently active transition activities to visualize: ', activeActivity);
+
     // visualize process token for retrieved active activities
     activeActivity.forEach(activeActivity =>
         visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI));
@@ -123,12 +129,10 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 
 /**
 * Get the currently active activities for the given process instance
-* Get the variables from the process instance
 *
 * @param camundaAPI the Camunda APIs to access the backend
 * @param processInstanceId the ID of the process instance to retrieve the active activity for
 * @returns an array with currently active activities
-* @returns an array with variables
 */
 async function getActiveActivities(camundaAPI, processInstanceId) {
     const activityInstanceEndpoint = `/engine-rest/process-instance/${processInstanceId}/activity-instances`
@@ -142,6 +146,28 @@ async function getActiveActivities(camundaAPI, processInstanceId) {
         }
     )
     return (await res.json())['childActivityInstances'];
+
+}
+
+/**
+* Get the currently active transition activities for the given process instance
+*
+* @param camundaAPI the Camunda APIs to access the backend
+* @param processInstanceId the ID of the process instance to retrieve the active transition activity for
+* @returns an array with currently active transition activities
+*/
+async function getActiveTransitionActivities(camundaAPI, processInstanceId) {
+    const activityInstanceEndpoint = `/engine-rest/process-instance/${processInstanceId}/activity-instances`
+    console.log("Retrieving active activity from URL: ", activityInstanceEndpoint)
+    let res = await fetch(activityInstanceEndpoint,
+        {
+            headers: {
+                'Accept': 'application/json',
+                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+            }
+        }
+    )
+    return (await res.json())['childTransitionInstances'];
 
 }
 
