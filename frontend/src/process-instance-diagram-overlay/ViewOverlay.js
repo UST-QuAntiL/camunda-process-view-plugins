@@ -221,15 +221,25 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
     console.log(selectedElement)
     let top = viewerElementRegistry.get(activeActivityId).y + viewerElementRegistry.get(activeActivityId).height + 11;
     let x = viewerElementRegistry.get(activeActivityId).x;
+    let overlayTop = viewerElementRegistry.get(activeActivityId).y - 150;
+
+    // TODO: get extensionelements from businessObject, check outputparam & add to overlay
 
 
     if (selectedElement) {
         const overlayHtml = `
         <div class="djs-overlays" style="position: absolute;" data-container-id="${activeActivityId}">
-        <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${x}px; top: ${top}px; transform-origin: left top;"><div class="activity-bottom-left-position instances-overlay">
-  <span class="badge instance-count" data-original-title="" title="">1</span>
-  <span class="badge badge-important instance-incidents" style="display: none;"></span>
-</div></div></div>
+            <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${x}px; top: ${top}px; transform-origin: left top;">
+                <div class="activity-bottom-left-position instances-overlay">
+                    <span class="badge instance-count" data-original-title="" title="">1</span>
+                    <span class="badge badge-important instance-incidents" style="display: none;"></span>
+                </div>
+            </div>
+            <div class="overlay-text" style="position: absolute; left: ${x}px; top: ${overlayTop}px">
+                    Variable:  <br>
+                    Variable2: 
+            </div>
+        </div>
   `;
 
         // Append the overlay HTML to the selected element
