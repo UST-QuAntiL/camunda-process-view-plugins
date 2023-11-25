@@ -55,6 +55,22 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let rootElement = elementArray[0];
     console.log('Creating overlay based on root element: ', rootElement)
 
+    for (let element of elementArray) {
+        console.log(element);
+        if (element.type === "bpmn:Task") {
+            parent = element.parent;
+            //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+            //  type: "bpmn:Task",
+            //});
+        }
+        if (element.type === "bpmn:DataObjectReference") {
+            bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+                type: "bpmn:DataObjectReference",
+            });
+        }
+    }
+
+
     // add overlay to remove existing elements from the diagram
     console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
     console.log(viewer.get("canvas"))
@@ -75,27 +91,9 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let parent;
     for (let element of elementArray) {
         console.log(element);
-        if (element.type === "bpmn:Task") {
-            parent = element.parent;
-            //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-            //  type: "bpmn:Task",
-            //});
-        }
-        if (element.type === "bpmn:DataObjectReference") {
-            bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-                type: "bpmn:DataObjectReference",
-            });
-        }
-    }
-
-    for (let element of elementArray) {
-
-        console.log(element);
         if (element.type === "bpmn:SubProcess") {
             element.parent = parent;
-            //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-            //  type: "bpmn:SubProcess",
-            // });
+            this.addOverlay(element);
         }
     }
 
@@ -116,13 +114,61 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
         visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI));
 }
 
+let rootElement = elementArray[0];
+console.log('Creating overlay based on root element: ', rootElement)
+for (let element of elementArray) {
+    console.log(element);
+    if (element.type === "bpmn:Task") {
+        parent = element.parent;
+        //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+        //  type: "bpmn:Task",
+        //});
+    }
+    if (element.type === "bpmn:DataObjectReference") {
+        bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+            type: "bpmn:DataObjectReference",
+        });
+    }
+}
+// add overlay to remove existing elements from the diagram
+console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
+console.log(viewer.get("canvas"))
+// get all tasks from the xml of the respective view and fire the replace event to trigger the QuantMERenderer
+let parent;
+for (let element of elementArray) {
+    console.log(element);
+    if (element.type === "bpmn:Task") {
+        parent = element.parent;
+        //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+        //  type: "bpmn:Task",
+        //});
+    }
+    if (element.type === "bpmn:DataObjectReference") {
+        bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+            type: "bpmn:DataObjectReference",
+        });
+    }
+}
+for (let element of elementArray) {
+    console.log(element);
+    if (element.type === "bpmn:SubProcess") {
+        element.parent = parent;
+        //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
+        //  type: "bpmn:SubProcess",
+        // });
+        this.addOverlay(element);
+    }
+}
+
 /**
- * Get the currently active activities for the given process instance
- *
- * @param camundaAPI the Camunda APIs to access the backend
- * @param processInstanceId the ID of the process instance to retrieve the active activity for
- * @returns an array with currently active activities
- */
+* Get the currently active activities for the given process instance
+* Get the variables from the process instance
+*
+* @param camundaAPI the Camunda APIs to access the backend
+* @param processInstanceId the ID of the process instance to retrieve the active activity for
+* @returns an array with currently active activities
+* @returns an array with variables
+*/
 async function getActiveActivities(camundaAPI, processInstanceId) {
     const activityInstanceEndpoint = `/engine-rest/process-instance/${processInstanceId}/activity-instances`
     console.log("Retrieving active activity from URL: ", activityInstanceEndpoint)
@@ -135,6 +181,28 @@ async function getActiveActivities(camundaAPI, processInstanceId) {
         }
     )
     return (await res.json())['childActivityInstances'];
+
+}
+
+/**
+ * Get the variables from the process instance
+ *
+ * @param camundaAPI the Camunda APIs to access the backend
+ * @param processInstanceId the ID of the process instance to retrieve the active activity for
+ * @returns an array with variables
+ */
+async function getVariables(camundaAPI, processInstanceId) {
+    const activityInstanceEndpoint = `/engine-rest/process-instance/${processInstanceId}/variables`
+    console.log("Retrieving variables from URL: ", activityInstanceEndpoint)
+    let res = await fetch(activityInstanceEndpoint,
+        {
+            headers: {
+                'Accept': 'application/json',
+                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+            }
+        }
+    )
+    return await res.json();
 }
 
 /**
@@ -166,6 +234,7 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
     console.log(selectedElement)
     let top = viewerElementRegistry.get(activeActivityId).y + viewerElementRegistry.get(activeActivityId).height + 11;
     let x = viewerElementRegistry.get(activeActivityId).x;
+
 
     if (selectedElement) {
         const overlayHtml = `
