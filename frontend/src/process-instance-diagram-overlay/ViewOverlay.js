@@ -53,8 +53,11 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     // get the flow element representing the whole BPMN plane
     let elementArray = viewerElementRegistry.getAll();
     console.log('Diagram contains the following elements: ', elementArray);
+
+    let allElements = viewerElementRegistry.getAll();
     elementArray = elementArray.filter(element => element.type === 'bpmn:Process');
     console.log('Found ' + elementArray.length + ' flow elements of type "bpmn:Process"!');
+
     if (elementArray.length === 0) {
         console.error('Unable to find element of type "bpmn:Process" to add overlay. Aborting!');
         return;
@@ -62,28 +65,12 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let rootElement = elementArray[0];
     console.log('Creating overlay based on root element: ', rootElement)
 
-    for (let element of elementArray) {
-        console.log(element);
-        if (element.type === "bpmn:Task") {
-            parent = element.parent;
-            //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-            //  type: "bpmn:Task",
-            //});
-        }
-        if (element.type === "bpmn:DataObjectReference") {
-            bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-                type: "bpmn:DataObjectReference",
-            });
-        }
-    }
-
-
     // add overlay to remove existing elements from the diagram
     console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
     console.log(viewer.get("canvas"))
     viewer.importXML(activeViewXml)
     viewerElementRegistry = viewer.get("elementRegistry")
-    elementArray = viewerElementRegistry.getAll();
+    let quantmeElementArray = viewerElementRegistry.getAll();
     console.log('Diagram contains the following elements: ', elementArray);
 
 
@@ -92,11 +79,11 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
     let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
     let bpmnReplace = quantmeModeler.get("bpmnReplace");
-    elementArray = viewerElementRegistry.getAll();
+    quantmeElementArray = viewerElementRegistry.getAll();
 
     // get all tasks from the xml of the respective view and fire the replace event to trigger the QuantMERenderer
     let parent;
-    for (let element of elementArray) {
+    for (let element of quantmeElementArray) {
         console.log(element);
         if (element.type === "bpmn:SubProcess") {
             element.parent = parent;
@@ -105,7 +92,6 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     }
 
     // get the xml of the modeler and update the view
-    //let updatedxml = await getXml(quantmeModeler);
     viewer.importXML(activeViewXml);
     overlays = viewer.get("overlays");
 
@@ -124,7 +110,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 
     // visualize process token for retrieved active activities
     activeActivity.forEach(activeActivity =>
-        visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI));
+        visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, allElements, processInstanceId, camundaAPI));
 }
 
 /**
@@ -203,7 +189,7 @@ async function getVariables(camundaAPI, processInstanceId) {
  * @param processInstanceId the ID of the process instance for which the process token is visualized
  * @param camundaAPI the Camunda APIs to access the backend
  */
-async function visualizeActiveActivities(activeActivityId, overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI) {
+async function visualizeActiveActivities(activeActivityId, overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, elementArray, processInstanceId, camundaAPI) {
     console.log('Visualizing process token for active activity with ID: ', activeActivityId);
 
     // get activity from executed workflow related to given ID
@@ -223,7 +209,48 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
     let x = viewerElementRegistry.get(activeActivityId).x;
     let overlayTop = viewerElementRegistry.get(activeActivityId).y - 150;
 
-    // TODO: get extensionelements from businessObject, check outputparam & add to overlay
+    let variables = await getVariables(camundaAPI, processInstanceId);
+    console.log(variables)
+
+    let variablesToDisplay = [];
+    for(let element of elementArray) {
+        console.log("get extensionElements");
+        console.log(element);
+        if (element.type === "bpmn:ServiceTask" && activeActivityId === element.id) {
+            console.log("ids are matching")
+            let extensionElements = element.businessObject.extensionElements.values;
+            console.log("the extensionelements are:", extensionElements);
+
+            for(let extensionElement of extensionElements) {
+                console.log(extensionElement);
+                
+                // requires to retrieve the children
+                if(extensionElement.$type === "camunda:connector") {
+                    for(let children of extensionElement.$children) {
+                        console.log(children);
+                        if(children.$type === "camunda:inputOutput"){
+                            for(let inoutParam of children.$children) {
+                                if(inoutParam.$type === "camunda:outputParameter") {
+                                    variablesToDisplay.push(inoutParam.name);
+                                }
+                            }
+                        }
+                        if(children.$type === "camunda:outputParameter") {
+                            variablesToDisplay.push(children.name);
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+
+    // Generate the variable text for overlay
+    
+    let variableText = variablesToDisplay.map(variableName => {const variableValue = variables[variableName].value;
+        const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
+        return `${variableName}: ${formattedValue}`}).join('<br>');
+
 
 
     if (selectedElement) {
@@ -236,11 +263,9 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
                 </div>
             </div>
             <div class="overlay-text" style="position: absolute; left: ${x}px; top: ${overlayTop}px">
-                    Variable:  <br>
-                    Variable2: 
+                    ${variableText}
             </div>
-        </div>
-  `;
+        </div>`;
 
         // Append the overlay HTML to the selected element
         selectedElement.insertAdjacentHTML('beforeend', overlayHtml);
