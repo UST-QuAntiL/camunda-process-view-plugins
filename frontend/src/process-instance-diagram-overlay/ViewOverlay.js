@@ -20,6 +20,13 @@ import quantMEModule from './quantme';
 import openTOSCAModule from './opentosca';
 import QuantMERenderer from './quantme/QuantMERenderer';
 
+/**
+ * Determines the actual view and updates the displayed xml of the viewer.
+ * 
+ * @param viewer contains the xml
+ * @param camundaAPI api to retrieve the variables and activities
+ * @param processInstanceId identifies the running process instance
+ */
 export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log('Rendering view overlay using viewer: ', viewer)
     console.log('View corresponds to process instance ID: ', processInstanceId)
@@ -112,52 +119,6 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     // visualize process token for retrieved active activities
     activeActivity.forEach(activeActivity =>
         visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, processInstanceId, camundaAPI));
-}
-
-let rootElement = elementArray[0];
-console.log('Creating overlay based on root element: ', rootElement)
-for (let element of elementArray) {
-    console.log(element);
-    if (element.type === "bpmn:Task") {
-        parent = element.parent;
-        //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-        //  type: "bpmn:Task",
-        //});
-    }
-    if (element.type === "bpmn:DataObjectReference") {
-        bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-            type: "bpmn:DataObjectReference",
-        });
-    }
-}
-// add overlay to remove existing elements from the diagram
-console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
-console.log(viewer.get("canvas"))
-// get all tasks from the xml of the respective view and fire the replace event to trigger the QuantMERenderer
-let parent;
-for (let element of elementArray) {
-    console.log(element);
-    if (element.type === "bpmn:Task") {
-        parent = element.parent;
-        //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-        //  type: "bpmn:Task",
-        //});
-    }
-    if (element.type === "bpmn:DataObjectReference") {
-        bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-            type: "bpmn:DataObjectReference",
-        });
-    }
-}
-for (let element of elementArray) {
-    console.log(element);
-    if (element.type === "bpmn:SubProcess") {
-        element.parent = parent;
-        //bpmnReplace.replaceElement(quantmeElementRegistry.get(element.id), {
-        //  type: "bpmn:SubProcess",
-        // });
-        this.addOverlay(element);
-    }
 }
 
 /**
