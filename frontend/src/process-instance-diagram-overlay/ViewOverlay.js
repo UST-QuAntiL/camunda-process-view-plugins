@@ -440,15 +440,15 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
         }
 
         // to do add overlay for each selected element
-        const gElement = document.querySelector('.djs-element');
-        gElement.addEventListener('mouseenter', async function() {
-            let variables2 = await getVariables(camundaAPI, processInstanceId);
-            console.log(variables2)
-            console.log('Mouse over the element!');
-        });
-
-        gElement.addEventListener('mouseleave', function() {
-            console.log('Mouse out of the element!');
+        // Select all elements from the diagram to register events
+        const gVisualElements = document.querySelectorAll('g.djs-visual');
+        gVisualElements.forEach((element) => {
+            element.addEventListener('mouseenter', function () {
+                console.log('Mouse entered a visual element!');
+            });
+            element.addEventListener('mouseleave', function () {
+                console.log('Mouse left a visual element!');
+            });
         });
 
 
