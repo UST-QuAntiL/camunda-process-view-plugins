@@ -13,6 +13,7 @@ import OpenTOSCARenderer from "./process-instance-diagram-overlay/opentosca/Open
 
 export function addSubprocessToggleButton(viewer, options, { control }) {
     const canvas = viewer.get("canvas");
+    console.log(viewer);
     const actionButtonElement = document.createElement("button");
     actionButtonElement.id = "deploymentButton";
     actionButtonElement.style.display = "none";
@@ -36,18 +37,19 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
                 }
             }
         }
-        const findTasks = (element) => {
-            console.log(element)
-            if (element.businessObject.get('quantmeTaskType')) {
-                tasks.push(element);
-            }
-        }
         canvas.getRootElement().children.forEach(findSubprocesses)
         for (const subProcess of subProcesses) {
             const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask"
             if (subProcess.type !== newType) {
-                canvas.removeShape(subProcess);
                 subProcess.type = newType;
+                //let bpmnReplace = viewer.get("bpmnReplace");
+                //bpmnReplace.replaceElement(viewer.get("elementRegistry").get(element.id), {
+                  //  type: "bpmn:Task",
+                 // });
+                console.log(subProcess);
+                canvas.removeShape(subProcess);
+                console.log(subProcess)
+                //subProcess.type = newType;
                 canvas.addShape(subProcess);
                 if (showSubProcesses) {
                     console.log("make overlay")
@@ -56,19 +58,6 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
             }
         }
 
-        canvas.getRootElement().children.forEach(findTasks)
-        for (const task of tasks) {
-            const newType = showTasks ? "bpmn:Task" : "bpmn:Task"
-            if (task.type !== newType) {
-                canvas.removeShape(task);
-                task.type = newType;
-                canvas.addShape(task);
-                //if (showSubProcesses) {
-                  //  console.log("make overlay")
-                   // drilldownOverlayBehavior.addOverlay(subProcess);
-                //}
-            }
-        }
     }
     update(showSubProcesses);
     actionButtonElement.addEventListener("click", () => {

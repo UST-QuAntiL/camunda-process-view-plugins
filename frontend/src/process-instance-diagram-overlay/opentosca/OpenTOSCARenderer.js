@@ -130,13 +130,6 @@ export default class OpenTOSCARenderer {
           return task;
         }
       }
-      if (element.type === "bpmn:Task") {
-        if (type === 'render.shape') {
-          let task = bpmnRenderer.drawShape(parentGfx, element);
-          drawTaskSVG(parentGfx, getQuantMESVG("TASK_TYPE_RESULT_COMBINATION"), null, true);
-          return task;
-        }
-      }
     });
 
     this.styles = styles;
