@@ -224,16 +224,18 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                 }
             }
         } else {
-           // to do dynamically change size based on number of variables/ qprov data
+
+            let overlaySize = variablesToDisplay.length * 40;
             const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-        <div class="com_box" style="position: absolute; left: ${diagramElement.x}px; top: ${overlayTop}px">${variableText}</div>
-        </div>`;
+                <div class="com_box" style="position: absolute; left: ${diagramElement.x}px; top: ${overlayTop}px; height: ${overlaySize}px">${variableText}</div>
+            </div>`;
             diagramElement.html = html;
             if (attributes["quantme:quantmeTaskType"] !== undefined) {
                 if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumCircuitExecutionTask") {
+                    overlaySize = 10 * 40;
                     let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-            <div class="com_box" style="position: absolute; left: ${diagramElement.x}px; top: ${overlayTop}px">${qProvText}</div>
-            </div>`;
+                    <div class="com_box" style="position: absolute; left: ${diagramElement.x}px; top: ${overlayTop}px; height: ${overlaySize}px">${qProvText}</div>
+                </div>`;
                     diagramElement.html = exehtml;
                 }
             }
@@ -434,8 +436,8 @@ async function getQPUData(qProvEndpoint, providerId, qpuName) {
 
         if (ibmqQpu) {
             // Extract the relevant data from the QPU
-            const { name, queueSize, numberOfQubits, avgT1Time, avgT2Time, avgReadoutError, avgSingleQubitError, avgMultiQubitGateError, avgSingleQubitGateTime, avgMultiQubitGateTime, maxGateTime } = ibmqQpu;
-            return { name, queueSize, numberOfQubits, avgT1Time, avgT2Time, avgReadoutError, avgSingleQubitError, avgMultiQubitGateError, avgSingleQubitGateTime, avgMultiQubitGateTime, maxGateTime };
+            const { name, queueSize, numberOfQubits, avgT1Time, avgT2Time, avgReadoutError, avgSingleQubitGateError, avgMultiQubitGateError, avgSingleQubitGateTime, avgMultiQubitGateTime, maxGateTime } = ibmqQpu;
+            return { name, queueSize, numberOfQubits, avgT1Time, avgT2Time, avgReadoutError, avgSingleQubitGateError, avgMultiQubitGateError, avgSingleQubitGateTime, avgMultiQubitGateTime, maxGateTime };
         } else {
             console.log(`QPU with name "${qpuName}" not found.`);
             return null;
