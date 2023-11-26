@@ -102,8 +102,122 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     activeActivity.forEach(activeActivity =>
         visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, allElements, processInstanceId, camundaAPI));
 
+    await computeOverlay(quantmeElementArray);
     registerOverlay(quantmeElementArray);
 }
+
+/**
+* Add event handling to diagram elements to display overlay
+*
+* @param diagramElements contains the diagram elements to retrieve data
+*/
+async function computeOverlay(diagramElements) {
+    console.log("Register overlay for diagram elements ", diagramElements);
+    let top = viewerElementRegistry.get(activeActivityId).y + viewerElementRegistry.get(activeActivityId).height + 11;
+    let x = viewerElementRegistry.get(activeActivityId).x;
+    let overlayTop = viewerElementRegistry.get(activeActivityId).y - 150;
+
+    let variables = await getVariables(camundaAPI, processInstanceId);
+    console.log(variables)
+
+    let variablesToDisplay = [];
+    for (let element of elementArray) {
+        console.log("get extensionElements");
+        console.log(element);
+        if (element.type === "bpmn:ServiceTask" && activeActivityId === element.id) {
+            console.log("ids are matching")
+            let extensionElements = element.businessObject.extensionElements.values;
+            console.log("the extensionelements are:", extensionElements);
+
+            for (let extensionElement of extensionElements) {
+                console.log(extensionElement);
+
+                // requires to retrieve the children
+                if (extensionElement.$type === "camunda:connector") {
+                    for (let children of extensionElement.$children) {
+                        console.log(children);
+                        if (children.$type === "camunda:inputOutput") {
+                            for (let inoutParam of children.$children) {
+                                if (inoutParam.$type === "camunda:outputParameter") {
+                                    variablesToDisplay.push(inoutParam.name);
+                                }
+                            }
+                        }
+                        if (children.$type === "camunda:outputParameter") {
+                            variablesToDisplay.push(children.name);
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+
+    // Generate the variable text for overlay
+    let fileVariables = [];
+    let variableText = variablesToDisplay.map(variableName => {
+        if (variableName !== "circuit") {
+            const variable = variables[variableName];
+            const variableValue = variable.value;
+            const variableType = variable.type;
+            console.log(variableType);
+            if (variableType !== "File") {
+                const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
+                return `${variableName}: ${formattedValue}`
+            } else {
+                fileVariables.push(variableName);
+            }
+        }
+    }).join('<br>');
+
+    for (let fileVariable of fileVariables) {
+        console.log("----fileVariable")
+        let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
+        let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
+        console.log(value);
+        variableText = variableText + '<br>' + (`${fileVariable}: <img class="quantum-view-picture" src=${value} />`)
+    }
+
+    let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
+    console.log("the response from QProv");
+    console.log(providerId)
+
+    let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, "ibmq_qasm_simulator");
+    console.log("QProv Data")
+    console.log(qprovData);
+    const qProvText = generateOverlayText(qprovData);
+
+
+    //if(activeActivityAttributes["quantme:containedElements"].includes(activeActivityId)){
+
+    //let entryPoint = entryPoints[0];
+    // add overlay to the retrieved root element
+    let entryPoint = quantmeElementRegistry.get(activeActivityId);
+    console.log(entryPoint);
+
+    for (let child of entryPoint.children) {
+        let childTop = child.y + child.height + 11;
+        console.log(child)
+        console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
+        //<div class="overlay-text" style="position: absolute; left: ${child.x}px; top: ${childTop}px"> ${qProvText}</div>
+        if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
+            if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
+                const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
+                <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${child.x}px; top: ${childTop}px; transform-origin: left top;">
+                    <div class="activity-bottom-left-position instances-overlay">
+                        <span class="badge instance-count" data-original-title="" title="">1</span>
+                        <span class="badge badge-important instance-incidents" style="display: none;"></span>
+                    </div>
+                </div>
+            <div class="com_box" style="position: absolute; left: ${child.x}px; top: ${childTop}px">${qProvText}</div>
+            </div>`;
+                // Append the overlay HTML to the selected element
+                selectedElement.insertAdjacentHTML('beforeend', html);
+            }
+        }
+    }
+}
+
 
 /**
 * Add event handling to diagram elements to display overlay
@@ -319,84 +433,19 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
     console.log('Visualizing process token for active activity with ID: ', activeActivityId);
 
     // get activity from executed workflow related to given ID
-    let activeActivity = viewerElementRegistry.get(activeActivityId).businessObject;
+    let activeActivity = viewerElementRegistry.get(activeActivityId);
     console.log('Retrieved corresponding activity object: ', activeActivity);
 
-    // retrieve attributes comprising relevant information about hybrid programs
-    let activeActivityAttributes = activeActivity.$attrs;
+    let activeActivityBo = activeActivity.businessObject;
+    let activeActivityAttributes = activeActivityBo.$attrs;
     console.log('Found attributes: ', activeActivityAttributes);
 
-    console.log(viewerElementRegistry.get(activeActivityId));
     const selector = `.djs-overlay-container`;
-
     const selectedElement = document.querySelector(selector);
-    console.log(selectedElement)
-    let top = viewerElementRegistry.get(activeActivityId).y + viewerElementRegistry.get(activeActivityId).height + 11;
-    let x = viewerElementRegistry.get(activeActivityId).x;
-    let overlayTop = viewerElementRegistry.get(activeActivityId).y - 150;
+    let top = activeActivity.y + activeActivity.height + 11;
+    let x = activeActivity.x;
 
-    let variables = await getVariables(camundaAPI, processInstanceId);
-    console.log(variables)
-
-    let variablesToDisplay = [];
-    for (let element of elementArray) {
-        console.log("get extensionElements");
-        console.log(element);
-        if (element.type === "bpmn:ServiceTask" && activeActivityId === element.id) {
-            console.log("ids are matching")
-            let extensionElements = element.businessObject.extensionElements.values;
-            console.log("the extensionelements are:", extensionElements);
-
-            for (let extensionElement of extensionElements) {
-                console.log(extensionElement);
-
-                // requires to retrieve the children
-                if (extensionElement.$type === "camunda:connector") {
-                    for (let children of extensionElement.$children) {
-                        console.log(children);
-                        if (children.$type === "camunda:inputOutput") {
-                            for (let inoutParam of children.$children) {
-                                if (inoutParam.$type === "camunda:outputParameter") {
-                                    variablesToDisplay.push(inoutParam.name);
-                                }
-                            }
-                        }
-                        if (children.$type === "camunda:outputParameter") {
-                            variablesToDisplay.push(children.name);
-                        }
-                    }
-                }
-            }
-
-        }
-    }
-
-    // Generate the variable text for overlay
-    let fileVariables = [];
-    let variableText = variablesToDisplay.map(variableName => {
-        if (variableName !== "circuit") {
-            const variable = variables[variableName];
-            const variableValue = variable.value;
-            const variableType = variable.type;
-            console.log(variableType);
-            if (variableType !== "File") {
-                const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
-                return `${variableName}: ${formattedValue}`
-            } else {
-                fileVariables.push(variableName);
-            }
-        }
-    }).join('<br>');
-
-    for (let fileVariable of fileVariables) {
-        console.log("----fileVariable")
-        let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
-        let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
-        console.log(value);
-        variableText = variableText + '<br>' + (`${fileVariable}: <img class="quantum-view-picture" src=${value} />`)
-    }
-
-
+    // attach a process token to the currently active activity
     if (selectedElement) {
         const overlayHtml = `
         <div class="djs-overlays" style="position: absolute;" data-container-id="${activeActivityId}">
@@ -406,60 +455,35 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
                     <span class="badge badge-important instance-incidents" style="display: none;"></span>
                 </div>
             </div>
-            <div class="com_box" style="position: absolute; left: ${x}px; top: ${overlayTop}px">${variableText}</div>
         </div>`;
 
         // Append the overlay HTML to the selected element
         selectedElement.insertAdjacentHTML('beforeend', overlayHtml);
     }
-    // find the entry point for the workflow part belonging to the hybrid program
+
+    // set the token on the task of the subprocess
     if (activeActivityAttributes['quantme:containedElements'] !== undefined) {
+        let subProcess = quantmeElementRegistry.get(activeActivityId);
+        console.log(subProcess);
 
-        let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
-        console.log("the response from QProv");
-        console.log(providerId)
-
-        let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, "ibmq_qasm_simulator");
-        console.log("QProv Data")
-        console.log(qprovData);
-        const qProvText = generateOverlayText(qprovData);
-
-
-        //if(activeActivityAttributes["quantme:containedElements"].includes(activeActivityId)){
-
-        //let entryPoint = entryPoints[0];
-        // add overlay to the retrieved root element
-        let entryPoint = quantmeElementRegistry.get(activeActivityId);
-        console.log(entryPoint);
-        overlays.add(rootElement, {
-            position: { left: entryPoint.x - 10, top: entryPoint.y + entryPoint.height - 10 },
-            html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
-        });
-
-
-        for (let child of entryPoint.children) {
+        // currently the subprocess contains exactly one quantme task
+        for (let child of subProcess.children) {
             let childTop = child.y + child.height + 11;
-            console.log(child)
-            console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
-            //<div class="overlay-text" style="position: absolute; left: ${child.x}px; top: ${childTop}px"> ${qProvText}</div>
+
             if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
                 if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
                     const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
-                <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${child.x}px; top: ${childTop}px; transform-origin: left top;">
-                    <div class="activity-bottom-left-position instances-overlay">
-                        <span class="badge instance-count" data-original-title="" title="">1</span>
-                        <span class="badge badge-important instance-incidents" style="display: none;"></span>
-                    </div>
-                </div>
-            <div class="com_box" style="position: absolute; left: ${child.x}px; top: ${childTop}px">${qProvText}</div>
-            </div>`;
-                    // Append the overlay HTML to the selected element
+                        <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${child.x}px; top: ${childTop}px; transform-origin: left top;">
+                            <div class="activity-bottom-left-position instances-overlay">
+                                <span class="badge instance-count" data-original-title="" title="">1</span>
+                                <span class="badge badge-important instance-incidents" style="display: none;"></span>
+                            </div>
+                        </div>
+                    </div>`;
                     selectedElement.insertAdjacentHTML('beforeend', html);
                 }
             }
         }
-
-        console.log("add overlay")
     }
 }
 
