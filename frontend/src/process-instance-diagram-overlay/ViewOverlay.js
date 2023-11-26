@@ -235,11 +235,11 @@ async function getQProvProviderId(qProvEndpoint, providerName) {
             return ibmqId;
         } else {
             console.log(`Provider with name "${providerName}" not found.`);
-            return null; // You might want to return a specific value in case the provider is not found
+            return null;
         }
     } catch (error) {
         console.error('Error fetching data:', error);
-        return null; // Handle the error as needed
+        return null;
     }
 }
 
@@ -267,11 +267,11 @@ async function getQPUData(qProvEndpoint, providerId, qpuName) {
             return { name, queueSize, avgT1Time, avgT2Time };
         } else {
             console.log(`QPU with name "${qpuName}" not found.`);
-            return null; // You might want to return a specific value in case the QPU is not found
+            return null;
         }
     } catch (error) {
         console.error('Error fetching data:', error);
-        return null; // Handle the error as needed
+        return null;
     }
 }
 
@@ -385,9 +385,7 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
                     <span class="badge badge-important instance-incidents" style="display: none;"></span>
                 </div>
             </div>
-            <div class="overlay-text" style="position: absolute; left: ${x}px; top: ${overlayTop}px">
-                    ${variableText}
-            </div>
+            <div class="com_box" style="position: absolute; left: ${x}px; top: ${overlayTop}px">${variableText}</div>
         </div>`;
 
         // Append the overlay HTML to the selected element
@@ -416,6 +414,7 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
             position: { left: entryPoint.x - 10, top: entryPoint.y + entryPoint.height - 10 },
             html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
         });
+
 
         for (let child of entryPoint.children) {
             let childTop = child.y + child.height + 11;
@@ -453,7 +452,6 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
 
 
         console.log("add overlay")
-        //}
     }
 }
 
