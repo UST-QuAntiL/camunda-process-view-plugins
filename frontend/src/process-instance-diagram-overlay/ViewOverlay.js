@@ -81,16 +81,6 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let bpmnReplace = quantmeModeler.get("bpmnReplace");
     quantmeElementArray = viewerElementRegistry.getAll();
 
-    // get all tasks from the xml of the respective view and fire the replace event to trigger the QuantMERenderer
-    let parent;
-    for (let element of quantmeElementArray) {
-        console.log(element);
-        if (element.type === "bpmn:SubProcess") {
-            element.parent = parent;
-            this.addOverlay(element);
-        }
-    }
-
     // get the xml of the modeler and update the view
     viewer.importXML(activeViewXml);
     overlays = viewer.get("overlays");
@@ -223,6 +213,75 @@ async function getVariables(camundaAPI, processInstanceId) {
     return (await res.json());
 }
 
+/**
+ * Get the id of the selected provider from QProv.
+ *
+ * @param qProvEndpoint the QProv endpoint to access the data
+ * @param provider the ID of the provider to retrieve the id for
+ * @returns the id of the provider
+ */
+async function getQProvProviderId(qProvEndpoint, providerName) {
+    const apiEndpoint = `${qProvEndpoint}/providers`; // Updated variable name
+    try {
+        const response = await fetch(apiEndpoint);
+        const data = await response.json();
+
+        // Find the provider with the given name
+        const ibmqProvider = data._embedded.providerDtoes.find(provider => provider.name === providerName);
+
+        if (ibmqProvider) {
+            // Extract the ID from the found provider
+            const ibmqId = ibmqProvider.id;
+            return ibmqId;
+        } else {
+            console.log(`Provider with name "${providerName}" not found.`);
+            return null; // You might want to return a specific value in case the provider is not found
+        }
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        return null; // Handle the error as needed
+    }
+}
+
+
+/**
+ * Get the id of the selected provider from QProv.
+ *
+ * @param qProvEndpoint the QProv endpoint to access the data
+ * @param provider the ID of the provider to retrieve the id for
+ * @returns the id of the provider
+ */
+async function getQPUData(qProvEndpoint, providerId, qpuName) {
+    //http://localhost:8094/qprov/providers/4c490baf-9859-4e2f-9777-6309f93ceeea/qpus
+    const apiEndpoint = `${qProvEndpoint}/providers/${providerId}/qpus`; // Updated variable name
+    try {
+        const response = await fetch(apiEndpoint);
+        const data = await response.json();
+
+        // Find the QPU with the given name
+        const ibmqQpu = data._embedded.qpuDtoes.find(qpu => qpu.name === qpuName);
+
+        if (ibmqQpu) {
+            // Extract the relevant data from the QPU
+            const { name, queueSize, avgT1Time, avgT2Time } = ibmqQpu;
+            return { name, queueSize, avgT1Time, avgT2Time };
+        } else {
+            console.log(`QPU with name "${qpuName}" not found.`);
+            return null; // You might want to return a specific value in case the QPU is not found
+        }
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        return null; // Handle the error as needed
+    }
+}
+
+function generateOverlayText(obj) {
+    const variableText = Object.entries(obj)
+        .map(([variable, value]) => `<strong>${variable}:</strong> ${value}`)
+        .join('<br>');
+
+    return variableText;
+}
 
 /**
  * Visualize the process token for the given active activity as an overlay
@@ -294,15 +353,17 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
     // Generate the variable text for overlay
     let fileVariables = [];
     let variableText = variablesToDisplay.map(variableName => {
-        const variable = variables[variableName];
-        const variableValue = variable.value;
-        const variableType = variable.type;
-        console.log(variableType);
-        if (variableType !== "File") {
-            const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
-            return `${variableName}: ${formattedValue}`
-        } else {
-            fileVariables.push(variableName);
+        if (variableName !== "circuit") {
+            const variable = variables[variableName];
+            const variableValue = variable.value;
+            const variableType = variable.type;
+            console.log(variableType);
+            if (variableType !== "File") {
+                const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
+                return `${variableName}: ${formattedValue}`
+            } else {
+                fileVariables.push(variableName);
+            }
         }
     }).join('<br>');
 
@@ -311,7 +372,7 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
         let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
         let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
         console.log(value);
-        variableText = variableText + '<br>'+ (`${fileVariable}: <img class="process-view-button-picture" src=${value} />`)
+        variableText = variableText + '<br>' + (`${fileVariable}: <img class="quantum-view-picture" src=${value} />`)
     }
 
 
@@ -334,8 +395,16 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
     }
     // find the entry point for the workflow part belonging to the hybrid program
     if (activeActivityAttributes['quantme:containedElements'] !== undefined) {
-        console.log(activeActivityAttributes["quantme:containedElements"]);
-        console.log(activeActivityId)
+
+        let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
+        console.log("the response from QProv");
+        console.log(providerId)
+
+        let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, "ibmq_qasm_simulator");
+        console.log("QProv Data")
+        console.log(qprovData);
+        const qProvText = generateOverlayText(qprovData);
+
 
         //if(activeActivityAttributes["quantme:containedElements"].includes(activeActivityId)){
 
@@ -347,6 +416,41 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
             position: { left: entryPoint.x - 10, top: entryPoint.y + entryPoint.height - 10 },
             html: '<span class="badge instance-count" data-original-title="" title="">1</span>'
         });
+
+        for (let child of entryPoint.children) {
+            let childTop = child.y + child.height + 11;
+            console.log(child)
+            console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
+            //<div class="overlay-text" style="position: absolute; left: ${child.x}px; top: ${childTop}px"> ${qProvText}</div>
+            if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
+                if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
+                    const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
+                <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${child.x}px; top: ${childTop}px; transform-origin: left top;">
+                    <div class="activity-bottom-left-position instances-overlay">
+                        <span class="badge instance-count" data-original-title="" title="">1</span>
+                        <span class="badge badge-important instance-incidents" style="display: none;"></span>
+                    </div>
+                </div>
+            <div class="com_box" style="position: absolute; left: ${child.x}px; top: ${childTop}px">${qProvText}</div>
+            </div>`;
+                    // Append the overlay HTML to the selected element
+                    selectedElement.insertAdjacentHTML('beforeend', html);
+                }
+            }
+        }
+
+        // to do add overlay for each selected element
+        const gElement = document.querySelector('.djs-element');
+        gElement.addEventListener('mouseenter', async function() {
+            let variables2 = await getVariables(camundaAPI, processInstanceId);
+            console.log(variables2)
+            console.log('Mouse over the element!');
+        });
+
+        gElement.addEventListener('mouseleave', function() {
+            console.log('Mouse out of the element!');
+        });
+
 
         console.log("add overlay")
         //}

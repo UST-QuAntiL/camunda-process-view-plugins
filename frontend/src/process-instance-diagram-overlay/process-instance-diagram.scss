@@ -10,10 +10,52 @@
 }
 
 .overlay-text {
-  background-color: #3498db; /* Set the background color as needed */
-  color: #fff; /* Text color */
+  background-color: white;
+  color: black;
   font-size: 14px;
-  padding: 8px 12px; /* Adjust the padding as needed */
-  border-radius: 5px; /* Adjust the border-radius for rounded corners */
-  /* Add more styling as per your requirements */
+  padding: 25px 20px;
+  border-radius: 5px;
+  width: 50%;
+  height: 50%;
+  stroke: black;
+}
+
+.quantum-view-picture {
+  width: 300px;
+  height: 300px;
+}
+
+.txt_First {
+  font-size:0.8em;
+  text-align: justify;
+  padding-bottom:20px;
+}
+.djs-element:hover + .com_box {
+  display: block;
+}
+
+.com_box {
+  width:200px;
+  height: 100px;
+  background: white;
+  color:black;
+  margin-right:8px;
+  margin-bottom: 5px;
+  margin-top:1px;
+  position: relative;
+  border-color: black;
+  border: 1px solid black;
+  padding-left: 5px;
+}
+.com_box::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 50%;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 20px 20px 0;
+  border-color: transparent black transparent transparent;
+  background-color: white; /* Filling color */
 }
