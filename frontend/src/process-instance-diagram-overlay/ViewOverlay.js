@@ -102,7 +102,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     activeActivity.forEach(activeActivity =>
         visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, allElements, processInstanceId, camundaAPI));
 
-    await computeOverlay(quantmeElementArray);
+    await computeOverlay(camundaAPI, processInstanceId, quantmeElementArray, allElements);
     registerOverlay(quantmeElementArray);
 }
 
@@ -111,98 +111,103 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 *
 * @param diagramElements contains the diagram elements to retrieve data
 */
-async function computeOverlay(diagramElements) {
+async function computeOverlay(camundaAPI, processInstanceId, diagramElements, elementArray) {
     console.log("Register overlay for diagram elements ", diagramElements);
-    let top = viewerElementRegistry.get(activeActivityId).y + viewerElementRegistry.get(activeActivityId).height + 11;
-    let x = viewerElementRegistry.get(activeActivityId).x;
-    let overlayTop = viewerElementRegistry.get(activeActivityId).y - 150;
-
     let variables = await getVariables(camundaAPI, processInstanceId);
-    console.log(variables)
+    for (let diagramElement of diagramElements) {
+        let top = diagramElement.y + diagramElement.height + 11;
+        let x = diagramElement.x;
+        let overlayTop = diagramElement.y - 150;
+        console.log(variables)
 
-    let variablesToDisplay = [];
-    for (let element of elementArray) {
-        console.log("get extensionElements");
-        console.log(element);
-        if (element.type === "bpmn:ServiceTask" && activeActivityId === element.id) {
-            console.log("ids are matching")
-            let extensionElements = element.businessObject.extensionElements.values;
-            console.log("the extensionelements are:", extensionElements);
+        let variablesToDisplay = [];
+        console.log(elementArray)
+        for (let element of elementArray) {
+            console.log("get extensionElements");
+            console.log(element);
+            if (element.type === "bpmn:ServiceTask" && diagramElement.id === element.id) {
+                console.log("ids are matching")
+                let extensionElements = element.businessObject.extensionElements.values;
+                console.log("the extensionelements are:", extensionElements);
 
-            for (let extensionElement of extensionElements) {
-                console.log(extensionElement);
+                for (let extensionElement of extensionElements) {
+                    console.log(extensionElement);
 
-                // requires to retrieve the children
-                if (extensionElement.$type === "camunda:connector") {
-                    for (let children of extensionElement.$children) {
-                        console.log(children);
-                        if (children.$type === "camunda:inputOutput") {
-                            for (let inoutParam of children.$children) {
-                                if (inoutParam.$type === "camunda:outputParameter") {
-                                    variablesToDisplay.push(inoutParam.name);
+                    // requires to retrieve the children
+                    if (extensionElement.$type === "camunda:connector") {
+                        for (let children of extensionElement.$children) {
+                            console.log(children);
+                            if (children.$type === "camunda:inputOutput") {
+                                for (let inoutParam of children.$children) {
+                                    if (inoutParam.$type === "camunda:outputParameter") {
+                                        variablesToDisplay.push(inoutParam.name);
+                                    }
                                 }
                             }
-                        }
-                        if (children.$type === "camunda:outputParameter") {
-                            variablesToDisplay.push(children.name);
+                            if (children.$type === "camunda:outputParameter") {
+                                variablesToDisplay.push(children.name);
+                            }
                         }
                     }
                 }
-            }
 
-        }
-    }
-
-    // Generate the variable text for overlay
-    let fileVariables = [];
-    let variableText = variablesToDisplay.map(variableName => {
-        if (variableName !== "circuit") {
-            const variable = variables[variableName];
-            const variableValue = variable.value;
-            const variableType = variable.type;
-            console.log(variableType);
-            if (variableType !== "File") {
-                const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
-                return `${variableName}: ${formattedValue}`
-            } else {
-                fileVariables.push(variableName);
             }
         }
-    }).join('<br>');
 
-    for (let fileVariable of fileVariables) {
-        console.log("----fileVariable")
-        let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
-        let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
-        console.log(value);
-        variableText = variableText + '<br>' + (`${fileVariable}: <img class="quantum-view-picture" src=${value} />`)
-    }
+        // Generate the variable text for overlay
+        let fileVariables = [];
+        let variableText = variablesToDisplay.map(variableName => {
+            if (variableName !== "circuit") {
+                const variable = variables[variableName];
+                const variableValue = variable.value;
+                const variableType = variable.type;
+                console.log(variableType);
+                if (variableType !== "File") {
+                    const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
+                    return `${variableName}: ${formattedValue}`
+                } else {
+                    fileVariables.push(variableName);
+                }
+            }
+        }).join('<br>');
 
-    let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
-    console.log("the response from QProv");
-    console.log(providerId)
+        for (let fileVariable of fileVariables) {
+            console.log("----fileVariable")
+            let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
+            let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
+            console.log(value);
+            variableText = variableText + '<br>' + (`${fileVariable}: <img class="quantum-view-picture" src=${value} />`)
+        }
 
-    let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, "ibmq_qasm_simulator");
-    console.log("QProv Data")
-    console.log(qprovData);
-    const qProvText = generateOverlayText(qprovData);
+        let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
+        console.log("the response from QProv");
+        console.log(providerId)
 
+        let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, "ibmq_qasm_simulator");
+        console.log("QProv Data")
+        console.log(qprovData);
+        const qProvText = generateOverlayText(qprovData);
+        console.log("DAS DIAGRAM");
+        console.log(diagramElement);
 
-    //if(activeActivityAttributes["quantme:containedElements"].includes(activeActivityId)){
+        let attributes = diagramElement.businessObject.$attrs;
+        console.log(attributes);
+        if (attributes["quantme:containedElements"] !== undefined) {
+            if (attributes["quantme:containedElements"].includes(diagramElement.id)) {
 
-    //let entryPoint = entryPoints[0];
-    // add overlay to the retrieved root element
-    let entryPoint = quantmeElementRegistry.get(activeActivityId);
-    console.log(entryPoint);
+                //let entryPoint = entryPoints[0];
+                // add overlay to the retrieved root element
+                let entryPoint = quantmeElementRegistry.get(diagramElement.id);
+                console.log(entryPoint);
 
-    for (let child of entryPoint.children) {
-        let childTop = child.y + child.height + 11;
-        console.log(child)
-        console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
-        //<div class="overlay-text" style="position: absolute; left: ${child.x}px; top: ${childTop}px"> ${qProvText}</div>
-        if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
-            if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
-                const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
+                for (let child of entryPoint.children) {
+                    let childTop = child.y + child.height + 11;
+                    console.log(child)
+                    console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
+                    //<div class="overlay-text" style="position: absolute; left: ${child.x}px; top: ${childTop}px"> ${qProvText}</div>
+                    if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
+                        if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
+                            const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
                 <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${child.x}px; top: ${childTop}px; transform-origin: left top;">
                     <div class="activity-bottom-left-position instances-overlay">
                         <span class="badge instance-count" data-original-title="" title="">1</span>
@@ -211,8 +216,26 @@ async function computeOverlay(diagramElements) {
                 </div>
             <div class="com_box" style="position: absolute; left: ${child.x}px; top: ${childTop}px">${qProvText}</div>
             </div>`;
-                // Append the overlay HTML to the selected element
-                selectedElement.insertAdjacentHTML('beforeend', html);
+                            entryPoint.html = html;
+                            // Append the overlay HTML to the selected element
+                            // selectedElement.insertAdjacentHTML('beforeend', html);
+                        }
+                    }
+                }
+            }
+        } else {
+           
+            const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
+        <div class="com_box" style="position: absolute; left: ${diagramElement.x}px; top: ${overlayTop}px">${variableText}</div>
+        </div>`;
+            diagramElement.html = html;
+            if (attributes["quantme:quantmeTaskType"] !== undefined) {
+                if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumCircuitExecutionTask") {
+                    let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
+            <div class="com_box" style="position: absolute; left: ${diagramElement.x}px; top: ${overlayTop}px">${qProvText}</div>
+            </div>`;
+                    diagramElement.html = exehtml;
+                }
             }
         }
     }
@@ -226,15 +249,28 @@ async function computeOverlay(diagramElements) {
 */
 function registerOverlay(diagramElements) {
     console.log("Register overlay for diagram elements ", diagramElements);
-    const visualElements = document.querySelectorAll('g.djs-visual');
-    visualElements.forEach((element) => {
-        element.addEventListener('mouseenter', function () {
-            console.log('Mouse entered a visual element!');
-        });
-        element.addEventListener('mouseleave', function () {
-            console.log('Mouse left a visual element!');
-        });
-    });
+    const selector = `.djs-overlay-container`;
+    const selectedElement = document.querySelector(selector);
+    for (let diagramElement of diagramElements) {
+        console.log(diagramElement);
+        let visualElements = document.querySelector(`g.djs-element[data-element-id="${diagramElement.id}"]`);
+        if (visualElements !== null && diagramElement.type !== "bpmn:SequenceFlow") {
+            console.log(visualElements);
+            const addedHtml = diagramElement.html;
+            console.log(addedHtml);
+            if (addedHtml !== null && addedHtml !== undefined) {
+                visualElements.addEventListener('mouseenter', function () {
+                    selectedElement.insertAdjacentHTML('beforeend', diagramElement.html);
+                    console.log('Mouse entered a visual element!');
+                });
+                visualElements.addEventListener('mouseleave', function () {
+                    selectedElement.innerHTML = selectedElement.innerHTML.replace(addedHtml, '');
+                    //selectedElement.innererHTML = selectedElement.innerHTML.replace(addedHtml, '');
+                    console.log('Mouse left a visual element!');
+                });
+            }
+        }
+    }
 }
 
 
