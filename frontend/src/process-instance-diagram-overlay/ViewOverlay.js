@@ -101,7 +101,28 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     // visualize process token for retrieved active activities
     activeActivity.forEach(activeActivity =>
         visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, allElements, processInstanceId, camundaAPI));
+
+    registerOverlay(quantmeElementArray);
 }
+
+/**
+* Add event handling to diagram elements to display overlay
+*
+* @param diagramElements contains the diagram elements to retrieve data
+*/
+function registerOverlay(diagramElements) {
+    console.log("Register overlay for diagram elements ", diagramElements);
+    const visualElements = document.querySelectorAll('g.djs-visual');
+    visualElements.forEach((element) => {
+        element.addEventListener('mouseenter', function () {
+            console.log('Mouse entered a visual element!');
+        });
+        element.addEventListener('mouseleave', function () {
+            console.log('Mouse left a visual element!');
+        });
+    });
+}
+
 
 /**
 * Get the currently active activities for the given process instance
@@ -437,19 +458,6 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
                 }
             }
         }
-
-        // to do add overlay for each selected element
-        // Select all elements from the diagram to register events
-        const gVisualElements = document.querySelectorAll('g.djs-visual');
-        gVisualElements.forEach((element) => {
-            element.addEventListener('mouseenter', function () {
-                console.log('Mouse entered a visual element!');
-            });
-            element.addEventListener('mouseleave', function () {
-                console.log('Mouse left a visual element!');
-            });
-        });
-
 
         console.log("add overlay")
     }
