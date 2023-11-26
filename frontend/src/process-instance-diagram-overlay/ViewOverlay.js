@@ -204,7 +204,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                     let childTop = child.y + child.height + 11;
                     console.log(child)
                     console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
-                    //<div class="overlay-text" style="position: absolute; left: ${child.x}px; top: ${childTop}px"> ${qProvText}</div>
+                    
                     if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
                         if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
                             const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
@@ -224,7 +224,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                 }
             }
         } else {
-           
+           // to do dynamically change size based on number of variables/ qprov data
             const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
         <div class="com_box" style="position: absolute; left: ${diagramElement.x}px; top: ${overlayTop}px">${variableText}</div>
         </div>`;
@@ -434,8 +434,8 @@ async function getQPUData(qProvEndpoint, providerId, qpuName) {
 
         if (ibmqQpu) {
             // Extract the relevant data from the QPU
-            const { name, queueSize, avgT1Time, avgT2Time } = ibmqQpu;
-            return { name, queueSize, avgT1Time, avgT2Time };
+            const { name, queueSize, numberOfQubits, avgT1Time, avgT2Time, avgReadoutError, avgSingleQubitError, avgMultiQubitGateError, avgSingleQubitGateTime, avgMultiQubitGateTime, maxGateTime } = ibmqQpu;
+            return { name, queueSize, numberOfQubits, avgT1Time, avgT2Time, avgReadoutError, avgSingleQubitError, avgMultiQubitGateError, avgSingleQubitGateTime, avgMultiQubitGateTime, maxGateTime };
         } else {
             console.log(`QPU with name "${qpuName}" not found.`);
             return null;
