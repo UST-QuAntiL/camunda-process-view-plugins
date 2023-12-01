@@ -303,7 +303,7 @@ export default class OpenTOSCARenderer {
     });
 
     const groupDef = svgCreate("g", { id: DEPLOYMENT_GROUP_ID });
-    parentGfx.append(groupDef);
+    parentGfx.prepend(groupDef);
 
     const { topNode, nodeTemplates, relationshipTemplates } =
       await loadTopology(deploymentModelUrl);
@@ -355,12 +355,12 @@ export default class OpenTOSCARenderer {
     });
 
     this.drawNodeConnections(
-      parentGfx,
+      groupDef,
       topNode,
       relationshipTemplates,
       positions
     );
-    this.drawTopologyOverlay(parentGfx, xMin - NODE_SHIFT_MARGIN / 2, xMax + NODE_WIDTH + NODE_SHIFT_MARGIN / 2, yMax + NODE_HEIGHT + NODE_SHIFT_MARGIN / 2);
+    this.drawTopologyOverlay(groupDef, xMin - NODE_SHIFT_MARGIN / 2, xMax + NODE_WIDTH + NODE_SHIFT_MARGIN / 2, yMax + NODE_HEIGHT + NODE_SHIFT_MARGIN / 2);
   }
 
   drawTopologyOverlay(parentGfx, xMin, xMax, yMax) {

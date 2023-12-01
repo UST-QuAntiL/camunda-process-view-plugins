@@ -13,16 +13,12 @@ import OpenTOSCARenderer from "./process-instance-diagram-overlay/opentosca/Open
 
 export function addSubprocessToggleButton(viewer, options, { control }) {
     const canvas = viewer.get("canvas");
-    console.log(viewer);
     const actionButtonElement = document.createElement("button");
     actionButtonElement.id = "deploymentButton";
     actionButtonElement.style.display = "none";
     let showSubProcesses = false;
     let showTasks = false;
     const drilldownOverlayBehavior = viewer.get("drilldownOverlayBehavior");
-
-    console.log(canvas);
-    
 
     const update = (showSubProcesses) => {
         const subProcesses = [];
@@ -39,20 +35,14 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
         }
         canvas.getRootElement().children.forEach(findSubprocesses)
         for (const subProcess of subProcesses) {
-            const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask"
-            if (subProcess.type !== newType) {
-                subProcess.type = newType;
-                //let bpmnReplace = viewer.get("bpmnReplace");
-                //bpmnReplace.replaceElement(viewer.get("elementRegistry").get(element.id), {
-                  //  type: "bpmn:Task",
-                 // });
-                console.log(subProcess);
+            const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask";
+        
+            // only change shape if it is a valid deployment model
+            if (subProcess.type !== newType && !subProcess.businessObject.get('opentosca:deploymentModelUrl').includes("wineryEndpoint")) {
                 canvas.removeShape(subProcess);
-                console.log(subProcess)
-                //subProcess.type = newType;
+                subProcess.type = newType;
                 canvas.addShape(subProcess);
                 if (showSubProcesses) {
-                    console.log("make overlay")
                     drilldownOverlayBehavior.addOverlay(subProcess);
                 }
             }
