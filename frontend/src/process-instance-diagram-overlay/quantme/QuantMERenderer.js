@@ -8,8 +8,6 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-
-import BpmnRenderer from "bpmn-js/lib/draw/BpmnRenderer";
 import * as quantmeReplaceOptions from "./QuantMEReplaceOptions";
 import * as consts from "./Constants";
 import {
@@ -26,24 +24,75 @@ import { queryAll as domQueryAll } from "min-dom";
 /**
  * This class extends the default BPMNRenderer to render the newly introduced QuantME task types
  */
-export default class QuantMERenderer extends BpmnRenderer {
-  constructor(
-    config,
-    eventBus,
-    styles,
-    pathMap,
-    quantMEPathMap,
-    canvas,
-    textRenderer
-  ) {
-    super(config, eventBus, styles, pathMap, canvas, textRenderer, 1001);
+export default class QuantMERenderer {
+  constructor(eventBus, styles, bpmnRenderer, textRenderer, canvas) {
+    eventBus.on(['render.shape'], 10000000000000, (evt, context) => {
+      const type = evt.type;
+      const element = context.element;
+      const parentGfx = context.gfx;
+      console.log(element);
+
+      if (element.type === "bpmn:Task" || element.type === "bpmn:SubProcess") {
+        if (type === 'render.shape') {
+          let task = bpmnRenderer.drawShape(parentGfx, element);
+          let attrs = element.businessObject.$attrs;
+          if (attrs !== undefined) {
+            let type = attrs["quantme:quantmeTaskType"];
+            //if(type === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS){
+              //let subprocess = this.drawHardwareSelectionSubprocess(parentGfx, quantMEPathMap, element, task);
+              //console.log("renderer subprocess")
+              //return subprocess;
+            if (type !== undefined) {
+              console.log("task renderer")
+              drawTaskSVG(parentGfx, type, null, true);
+              //this.addOverlay(parentGfx, element, bpmnRenderer);
+            }
+            return task;
+          }
+        }
+      }
+
+      if (element.type === "bpmn:DataObjectReference") {
+        if (type === 'render.shape') {
+          console.log("render new")
+          let task = bpmnRenderer.drawShape(parentGfx, element);
+          let attrs = element.businessObject.$attrs;
+          if (attrs !== undefined) {
+            let type = attrs["quantmeTaskType"];
+            console.log(type);
+            if (type !== undefined) {
+              drawDataObjectSVG(parentGfx, type, null, true);
+            }
+            return task;
+          }
+        }
+      }
+
+    });
 
     var computeStyle = styles.computeStyle;
 
-    var defaultFillColor = config && config.defaultFillColor,
-      defaultStrokeColor = config && config.defaultStrokeColor;
+    var defaultFillColor = "white",
+      defaultStrokeColor = "white";
 
-    function drawTaskSVG(parentGfx, iconID) {
+    function drawDataObjectSVG(parentGfx, iconID) {
+      let importsvg = getQuantMESVG(iconID);
+      let innerSVGstring = importsvg.svg;
+      let transformDef = importsvg.transform;
+
+      const groupDef = svgCreate("g");
+      svgAttr(groupDef, { transform: transformDef });
+      innerSVG(groupDef, innerSVGstring);
+      let pathElement = parentGfx.querySelector("path");
+      let existingCssText = pathElement.style.cssText;
+      pathElement.style.cssText =
+        existingCssText + " fill-opacity: 0 !important;";
+
+      // draw svg in the background
+      parentGfx.prepend(groupDef);
+    }
+
+    function drawTaskSVG(parentGfx, iconID, svgAttributes, foreground) {
       var importsvg = getQuantMESVG(iconID);
       var innerSVGstring = importsvg.svg;
       var transformDef = importsvg.transform;
@@ -302,82 +351,9 @@ export default class QuantMERenderer extends BpmnRenderer {
 
         return task;
       },
-      [consts.READOUT_ERROR_MITIGATION_TASK]: function (
-        self,
-        parentGfx,
-        element
-      ) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
-        drawTaskSVG(parentGfx, "TASK_TYPE_ERROR_MITIGATION");
-        return task;
-      },
-      [consts.WARM_STARTING_TASK]: function (self, parentGfx, element) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
-        drawTaskSVG(parentGfx, "TASK_TYPE_WARM_STARTING");
-        return task;
-      },
-      [consts.PARAMETER_OPTIMIZATION_TASK]: function (
-        self,
-        parentGfx,
-        element
-      ) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
-        drawTaskSVG(parentGfx, "TASK_TYPE_PARAMETER_OPTIMIZATION");
-        return task;
-      },
-      [consts.RESULT_EVALUATION_TASK]: function (self, parentGfx, element) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
-        setTimeout(function () {}, 10000);
-        drawTaskSVG(parentGfx, "TASK_TYPE_RESULT_EVALUATION");
-        return task;
-      },
-      [consts.VARIATIONAL_QUANTUM_ALGORITHM_TASK]: function (
-        self,
-        parentGfx,
-        element
-      ) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
-        drawTaskSVG(parentGfx, "TASK_TYPE_VQA");
-        return task;
-      },
-      [consts.ERROR_CORRECTION_TASK]: function (self, parentGfx, element) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
-        drawTaskSVG(parentGfx, "TASK_TYPE_ERROR_CORRECTION");
-        return task;
-      },
-      [consts.QUANTUM_CIRCUIT_OBJECT]: function (self, parentGfx, element) {
-        const task = self.renderer("bpmn:DataObject")(parentGfx, element);
-        console.log(task);
-        drawDataObjectSVG(parentGfx, "QUANTUM_CIRCUIT_OBJECT");
-        return task;
-      },
-      [consts.RESULT_OBJECT]: function (self, parentGfx, element) {
-        const task = self.renderer("bpmn:DataObject")(parentGfx, element);
-        drawDataObjectSVG(parentGfx, "RESULT_OBJECT");
-        return task;
-      },
-      [consts.EVALUATION_RESULT_OBJECT]: function (self, parentGfx, element) {
-        const task = self.renderer("bpmn:DataObject")(parentGfx, element);
-        drawDataObjectSVG(parentGfx, "EVALUATION_RESULT_OBJECT");
-        return task;
-      },
-      [consts.PARAMETRIZATION_OBJECT]: function (self, parentGfx, element) {
-        const task = self.renderer("bpmn:DataObject")(parentGfx, element);
-        drawDataObjectSVG(parentGfx, "PARAMETRIZATION_OBJECT");
-        return task;
-      },
-      [consts.INITIAL_STATE_OBJECT]: function (self, parentGfx, element) {
-        const task = self.renderer("bpmn:DataObject")(parentGfx, element);
-        drawDataObjectSVG(parentGfx, "INITIAL_STATE_OBJECT");
-        return task;
-      },
     };
 
     setTimeout(function () {
-      // TODO: pullrequest to change BpmnRenderer.js if issue persists in new Version
-      // extract markers out of task icon svgs when loading a saved diagram
-      // due to restrictions in BpmnRenderer.js that places them in first defs element in svg
-
       var existingDefs = domQueryAll("marker", canvas._svg);
       if (existingDefs != null) {
         var createdNewDefs = false;
@@ -416,6 +392,48 @@ export default class QuantMERenderer extends BpmnRenderer {
     return false;
   }
 
+  drawHardwareSelectionSubprocess(parentGfx,quantMEPathMap, element, subprocess){
+    var pathData = quantMEPathMap.getPath(
+      "SUBPROCESS_QUANTUM_HARDWARE_SELECTION"
+    );
+    drawPath(parentGfx, pathData, {
+      transform: "scale(0.5)",
+      strokeWidth: 1.5,
+      fill: getFillColor(element, defaultFillColor),
+      stroke: getStrokeColor(element, defaultStrokeColor),
+    });
+
+    // create circuit paths with filled shapes
+    pathData = quantMEPathMap.getPath(
+      "SUBPROCESS_QUANTUM_HARDWARE_SELECTION_FILL"
+    );
+    drawPath(parentGfx, pathData, {
+      transform: "scale(0.5)",
+      strokeWidth: 1.5,
+      fill: getFillColor(element, "#000000"),
+      stroke: getStrokeColor(element, defaultStrokeColor),
+    });
+    console.log(subprocess)
+
+    return subprocess;
+
+  }
+
+  addOverlay(parentGfx, element, bpmnRenderer) {
+
+
+    let groupDef = svgCreate('g');
+    
+    svgAppend(parentGfx, svgCreate("path", {
+      d: "M -260 -110 L 360 -110 L 360 -10   L 55 -10   L 50 -5  L 45 -10  L -260 -10 Z",
+      fill: "white",
+      stroke: "#777777",
+      "pointer-events": "all"
+  }));
+    svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${-238}, ${-78})`});
+
+}
+
   drawShape(parentNode, element) {
     // handle QuantME elements
     if (element.type in this.quantMeHandlers) {
@@ -431,11 +449,9 @@ export default class QuantMERenderer extends BpmnRenderer {
 }
 
 QuantMERenderer.$inject = [
-  "config",
   "eventBus",
   "styles",
-  "pathMap",
-  "quantMEPathMap",
-  "canvas",
+  "bpmnRenderer",
   "textRenderer",
+  "canvas",
 ];

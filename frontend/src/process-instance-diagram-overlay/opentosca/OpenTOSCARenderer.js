@@ -24,7 +24,8 @@ import {
   prepend as svgPrepend,
   innerSVG
 } from 'tiny-svg';
-import {query as domQuery} from 'min-dom';
+import { query as domQuery } from 'min-dom';
+import { getQuantMESVG } from "./QuantMESVGMap";
 
 const HIGH_PRIORITY = 14001;
 const SERVICE_TASK_TYPE = 'bpmn:ServiceTask';
@@ -45,615 +46,646 @@ const STROKE_STYLE = {
 };
 
 async function loadTopology(deploymentModelUrl) {
-  if (deploymentModelUrl.startsWith('{{ wineryEndpoint }}')) {
-      deploymentModelUrl = deploymentModelUrl.replace('{{ wineryEndpoint }}', config.getWineryEndpoint());
-  }
   let topology;
   let tags;
   try {
-      topology = await fetch(deploymentModelUrl.replace('?csar', 'topologytemplate'),
-          {headers: {"Accept": "application/json"}})
-          .then(res => res.json());
-      tags = await fetch(deploymentModelUrl.replace('?csar', 'tags'),
-          {headers: {"Accept": "application/json"}})
-          .then(res => res.json());
+    topology = await fetch(deploymentModelUrl.replace('?csar', 'topologytemplate'),
+      { headers: { "Accept": "application/json" } })
+      .then(res => res.json());
+    tags = await fetch(deploymentModelUrl.replace('?csar', 'tags'),
+      { headers: { "Accept": "application/json" } })
+      .then(res => res.json());
 
   } catch (e) {
-      throw new Error('An unexpected error occurred during loading the deployments models topology.');
+    throw new Error('An unexpected error occurred during loading the deployments models topology.');
   }
   let topNode;
   const topNodeTag = tags.find(tag => tag.name === "top-node");
   if (topNodeTag) {
-      const topNodeId = topNodeTag.value;
-      topNode = topology.nodeTemplates.find(nodeTemplate => nodeTemplate.id === topNodeId);
-      if (!topNode) {
-          throw new Error(`Top level node "${topNodeId}" not found.`);
-      }
+    const topNodeId = topNodeTag.value;
+    topNode = topology.nodeTemplates.find(nodeTemplate => nodeTemplate.id === topNodeId);
+    if (!topNode) {
+      throw new Error(`Top level node "${topNodeId}" not found.`);
+    }
   } else {
-      let nodes = new Map(topology.nodeTemplates.map(nodeTemplate => [nodeTemplate.id, nodeTemplate]));
-      for (let relationship of topology.relationshipTemplates) {
-          if (relationship.name === "HostedOn") {
-              nodes.delete(relationship.targetElement.ref);
-          }
+    let nodes = new Map(topology.nodeTemplates.map(nodeTemplate => [nodeTemplate.id, nodeTemplate]));
+    for (let relationship of topology.relationshipTemplates) {
+      if (relationship.name === "HostedOn") {
+        nodes.delete(relationship.targetElement.ref);
       }
-      if (nodes.size === 1) {
-          topNode = nodes.values().next().value;
-      }
+    }
+    if (nodes.size === 1) {
+      topNode = nodes.values().next().value;
+    }
   }
   if (!topNode) {
-      throw new Error("No top level node found.");
+    throw new Error("No top level node found.");
   }
 
   return {
-      topNode,
-      nodeTemplates: topology.nodeTemplates,
-      relationshipTemplates: topology.relationshipTemplates
+    topNode,
+    nodeTemplates: topology.nodeTemplates,
+    relationshipTemplates: topology.relationshipTemplates
   };
 }
 
 function drawTaskSVG(parentGfx, importSVG, svgAttributes, foreground) {
   const innerSvgStr = importSVG.svg,
-      transformDef = importSVG.transform;
+    transformDef = importSVG.transform;
 
   const groupDef = svgCreate('g');
-  svgAttr(groupDef, {transform: transformDef});
+  svgAttr(groupDef, { transform: transformDef });
   innerSVG(groupDef, innerSvgStr);
 
   if (!foreground) {
-      // set task box opacity to 0 such that icon can be in the background
-      svgAttr(svgSelect(parentGfx, 'rect'), {'fill-opacity': 0});
+    // set task box opacity to 0 such that icon can be in the background
+    svgAttr(svgSelect(parentGfx, 'rect'), { 'fill-opacity': 0 });
   }
 
   if (svgAttributes) {
-      svgAttr(groupDef, svgAttributes);
+    svgAttr(groupDef, svgAttributes);
   }
 
   if (foreground) {
-      parentGfx.append(groupDef);
+    parentGfx.append(groupDef);
   } else {
-      parentGfx.prepend(groupDef);
+    parentGfx.prepend(groupDef);
   }
   return groupDef;
 }
 
 export default class OpenTOSCARenderer {
   constructor(eventBus, styles, bpmnRenderer, textRenderer, canvas) {
-      eventBus.on(['render.shape'], HIGH_PRIORITY, (evt, context) => {
-          const type = evt.type;
-          const element = context.element;
-          const parentGfx = context.gfx;
+    eventBus.on(['render.shape'], HIGH_PRIORITY, (evt, context) => {
+      const type = evt.type;
+      const element = context.element;
+      const parentGfx = context.gfx;
+      console.log("render")
+      console.log(element);
+      if (element.type === SERVICE_TASK_TYPE) {
+        if (type === 'render.shape') {
+          let task = bpmnRenderer.drawShape(parentGfx, element);
+          this.addSubprocessView(parentGfx, element, bpmnRenderer);
+          this.showDeploymentModel(parentGfx, element);
+          return task;
+        }
+      }
+    });
 
-          if (element.type === SERVICE_TASK_TYPE) {
-              if (type === 'render.shape') {
-                  const task = bpmnRenderer.drawShape(parentGfx, element);
-                  this.addSubprocessView(parentGfx, element, bpmnRenderer);
-                  this.maybeAddShowDeploymentModelButton(parentGfx, element);
-                  return task;
-              }
-          }
-      });
+    this.styles = styles;
+    this.textRenderer = textRenderer;
+    this.eventBus = eventBus;
 
-      this.styles = styles;
-      this.textRenderer = textRenderer;
-      this.eventBus = eventBus;
-
-      this.addMarkerDefinition(canvas);
+    this.addMarkerDefinition(canvas);
+    this.currentlyShownDeploymentsModels = new Map();
   }
 
   addMarkerDefinition(canvas) {
-      const marker = svgCreate('marker', {
-          id: DEPLOYMENT_REL_MARKER_ID,
-          viewBox: '0 0 8 8',
-          refX: 8,
-          refY: 4,
-          markerWidth: 8,
-          markerHeight: 8,
-          orient: 'auto'
-      });
-      svgAppend(marker, svgCreate('path', {
-          d: 'M 0 0 L 8 4 L 0 8',
-          ...this.styles.computeStyle({}, ['no-fill'], {
-              ...STROKE_STYLE,
-              strokeWidth: 1,
-              strokeDasharray: 2
-          })
-      }));
+    const marker = svgCreate('marker', {
+      id: DEPLOYMENT_REL_MARKER_ID,
+      viewBox: '0 0 8 8',
+      refX: 8,
+      refY: 4,
+      markerWidth: 8,
+      markerHeight: 8,
+      orient: 'auto'
+    });
+    svgAppend(marker, svgCreate('path', {
+      d: 'M 0 0 L 8 4 L 0 8',
+      ...this.styles.computeStyle({}, ['no-fill'], {
+        ...STROKE_STYLE,
+        strokeWidth: 1,
+        strokeDasharray: 2
+      })
+    }));
 
-      let defs = domQuery('defs', canvas._svg);
-      if (!defs) {
-          defs = svgCreate('defs');
+    let defs = domQuery('defs', canvas._svg);
+    if (!defs) {
+      defs = svgCreate('defs');
 
-          svgPrepend(canvas._svg, defs);
-      }
-      svgAppend(defs, marker);
+      svgPrepend(canvas._svg, defs);
+    }
+    svgAppend(defs, marker);
   }
 
   addSubprocessView(parentGfx, element, bpmnRenderer) {
-      let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
-      if (!deploymentModelUrl) return;
+    let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
+    let onDemand = element.businessObject.get('opentosca:onDemand');
+    if (!deploymentModelUrl || onDemand !== "true") return;
 
-      let groupDef = svgCreate('g');
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${-238}, ${-78})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          type: 'bpmn:StartEvent',
-          height: 36,
-          width: 36,
-          businessObject: {
-              isInterrupting: true
-          }
-      });
-      svgAppend(parentGfx, groupDef);
-      bpmnRenderer.drawConnection(parentGfx, {
-          ...element,
-          type: 'bpmn:SequenceFlow',
-          businessObject: {},
-          waypoints: [
-              {x: -200, y: -60},
-              {x: -150, y: -60},
-          ]
-      });
+    let groupDef = svgCreate('g');
+
+    svgAppend(parentGfx, svgCreate("path", {
+      d: "M -260 -110 L 360 -110 L 360 -10   L 55 -10   L 50 -5  L 45 -10  L -260 -10 Z",
+      fill: "white",
+      stroke: "#777777",
+      "pointer-events": "all"
+    }));
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${-238}, ${-78})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:StartEvent',
+      height: 36,
+      width: 36,
+      businessObject: {
+        isInterrupting: true
+      }
+    });
+    svgAppend(parentGfx, groupDef);
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: -200, y: -60 },
+        { x: -150, y: -60 },
+      ]
+    });
 
 
-      groupDef = svgCreate('g');
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${-150}, ${-100})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          type: 'bpmn:ScriptTask',
-          businessObject: {
-              "name": "Create deployment"
-          }
-      });
-      svgAppend(parentGfx, groupDef);
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${-150}, ${-100})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ScriptTask',
+      businessObject: {
+        "name": "Create deployment"
+      }
+    });
+    svgAppend(parentGfx, groupDef);
 
-      bpmnRenderer.drawConnection(parentGfx, {
-          ...element,
-          type: 'bpmn:SequenceFlow',
-          businessObject: {},
-          waypoints: [
-              {x: -50, y: -60},
-              {x: 0, y: -60},
-          ]
-      });
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: -50, y: -60 },
+        { x: 0, y: -60 },
+      ]
+    });
 
-      groupDef = svgCreate('g');
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${0}, ${-100})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          type: 'bpmn:ScriptTask',
-          businessObject: {
-              "name": "Wait for deployment"
-          }
-      });
-      svgAppend(parentGfx, groupDef);
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${0}, ${-100})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ScriptTask',
+      businessObject: {
+        "name": "Wait for deployment"
+      }
+    });
+    svgAppend(parentGfx, groupDef);
 
-      bpmnRenderer.drawConnection(parentGfx, {
-          ...element,
-          type: 'bpmn:SequenceFlow',
-          businessObject: {},
-          waypoints: [
-              {x: 100, y: -60},
-              {x: 150, y: -60},
-          ]
-      });
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: 100, y: -60 },
+        { x: 150, y: -60 },
+      ]
+    });
 
-      groupDef = svgCreate('g');
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${150}, ${-100})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          type: 'bpmn:ServiceTask',
-          businessObject: {
-              "name": "Call service"
-          }
-      });
-      svgAppend(parentGfx, groupDef);
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${150}, ${-100})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ServiceTask',
+      businessObject: {
+        "name": "Call service"
+      }
+    });
+    svgAppend(parentGfx, groupDef);
 
-      bpmnRenderer.drawConnection(parentGfx, {
-          ...element,
-          type: 'bpmn:SequenceFlow',
-          businessObject: {},
-          waypoints: [
-              {x: 250, y: -60},
-              {x: 300, y: -60},
-          ]
-      });
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: 250, y: -60 },
+        { x: 300, y: -60 },
+      ]
+    });
 
-      groupDef = svgCreate('g');
-      svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${301}, ${-78})`});
-      bpmnRenderer.drawShape(groupDef, {
-          ...element,
-          height: 36,
-          width: 36,
-          type: 'bpmn:EndEvent',
-          businessObject: {}
-      });
-      svgAppend(parentGfx, groupDef);
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${301}, ${-78})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      height: 36,
+      width: 36,
+      type: 'bpmn:EndEvent',
+      businessObject: {}
+    });
+    svgAppend(parentGfx, groupDef);
 
-      svgAppend(parentGfx, svgCreate("path", {
-          d: "M -260 -110 L 360 -110 L 360 -10   L 55 -10   L 50 -5  L 45 -10  L -260 -10 Z",
-          fill: "none",
-          stroke: "#777777",
-          "pointer-events": "all"
-      }));
   }
 
-  maybeAddShowDeploymentModelButton(parentGfx, element) {
-      let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
-      if (!deploymentModelUrl) return;
-
-      const button = drawTaskSVG(parentGfx, {
-          transform: 'matrix(0.3, 0, 0, 0.3, 85, 65)',
-          svg: buttonIcon
-      }, null, true);
-      button.style['pointer-events'] = 'all';
-      button.style['cursor'] = 'pointer';
-      button.addEventListener('click', (e) => {
-          e.preventDefault();
-          element.deploymentModelTopology = undefined;
-          element.showDeploymentModel = !element.showDeploymentModel;
-          this.showOrDeleteDeploymentModel(parentGfx, element, deploymentModelUrl);
-      });
-      this.showOrDeleteDeploymentModel(parentGfx, element, deploymentModelUrl);
+  showOrDeleteDeploymentModel(parentGfx, element) {
+    if (element.showDeploymentModel) {
+      this.showDeploymentModel(parentGfx, element);
+    } else {
+      this.removeDeploymentModel(parentGfx, element);
+    }
   }
 
-  showOrDeleteDeploymentModel(parentGfx, element, deploymentModelUrl) {
-      if (element.showDeploymentModel) {
-          this.showDeploymentModel(parentGfx, element, deploymentModelUrl);
-      } else {
-          this.removeDeploymentModel(parentGfx, element);
+  async showDeploymentModel(parentGfx, element) {
+    let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
+    if (!deploymentModelUrl) return;
+    const button = drawTaskSVG(parentGfx, {
+      transform: 'matrix(0.3, 0, 0, 0.3, 85, 65)',
+      svg: buttonIcon
+    }, null, true);
+    button.style['pointer-events'] = 'all';
+    button.style['cursor'] = 'pointer';
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      element.deploymentModelTopology = undefined;
+      element.showDeploymentModel = !element.showDeploymentModel;
+      this.showOrDeleteDeploymentModel(parentGfx, element);
+    });
+
+    const groupDef = svgCreate("g", { id: DEPLOYMENT_GROUP_ID });
+    parentGfx.prepend(groupDef);
+
+    const { topNode, nodeTemplates, relationshipTemplates } =
+      await loadTopology(deploymentModelUrl);
+
+    let ySubtract = parseInt(topNode.y);
+    let xSubtract = parseInt(topNode.x);
+    let xMin = 0;
+    let xMax = 0;
+    let yMax = 0;
+
+
+    const positions = new Map();
+    for (let nodeTemplate of nodeTemplates) {
+      const position = {
+        x: (parseInt(nodeTemplate.x) - xSubtract) / 1.4,
+        y: (parseInt(nodeTemplate.y) - ySubtract) / 1.4,
+      };
+
+      if (position.x < xMin) {
+        xMin = position.x;
       }
-  }
-
-  async showDeploymentModel(parentGfx, element, deploymentModelUrl) {
-      if (!element.deploymentModelTopology || element.loadedDeploymentModelUrl !== deploymentModelUrl) {
-          try {
-              const topology = await loadTopology(deploymentModelUrl);
-              element.loadedDeploymentModelUrl = deploymentModelUrl;
-              element.deploymentModelTopology = topology;
-          } catch (e) {
-              element.showDeploymentModel = false;
-              element.loadedDeploymentModelUrl = null;
-              element.deploymentModelTopology = null;
-              this.removeDeploymentModel(parentGfx, element);
-              console.error(e);
-              return;
-          }
+      if (position.x > xMax) {
+        xMax = position.x;
       }
-      const groupDef = svgCreate('g', {id: DEPLOYMENT_GROUP_ID});
-      parentGfx.prepend(groupDef);
-
-      const {nodeTemplates, relationshipTemplates, topNode} = element.deploymentModelTopology;
-
-      let ySubtract = parseInt(topNode.y);
-      let xSubtract = parseInt(topNode.x);
-
-      let xMin = 0;
-      let xMax = 0;
-      let yMax = 0;
-
-      const positions = new Map();
-      for (let nodeTemplate of nodeTemplates) {
-          const position = {
-              x: (parseInt(nodeTemplate.x) - xSubtract) / 1.4,
-              y: (parseInt(nodeTemplate.y) - ySubtract) / 1.4,
-          };
-
-          if (position.x < xMin) {
-            xMin = position.x;
-          }
-          if (position.x > xMax) {
-            xMax = position.x;
-          }
-          if (position.y > yMax) {
-            yMax = position.y;
-          }
-
-          positions.set(nodeTemplate.id, position);
-          if (nodeTemplate.id !== topNode.id) {
-              this.drawNodeTemplate(groupDef, nodeTemplate, position);
-          }
+      if (position.y > yMax) {
+        yMax = position.y;
+      }
+      positions.set(nodeTemplate.id, position);
+      if (nodeTemplate.id !== topNode.id) {
+        this.drawNodeTemplate(groupDef, nodeTemplate, position);
       }
 
-      this.drawNodeConnections(groupDef, topNode, relationshipTemplates, positions);
-      this.drawTopologyOverlay(groupDef, xMin-NODE_SHIFT_MARGIN/2, xMax+NODE_WIDTH+NODE_SHIFT_MARGIN/2, yMax+NODE_HEIGHT+NODE_SHIFT_MARGIN/2);
+    }
+    const boundingBox = {
+      left: Math.min(...[...positions.values()].map((p) => p.x)) + element.x,
+      top: Math.min(...[...positions.values()].map((p) => p.y)) + element.y,
+      right:
+        Math.max(...[...positions.values()].map((p) => p.x)) +
+        NODE_WIDTH +
+        element.x,
+      bottom:
+        Math.max(...[...positions.values()].map((p) => p.y)) +
+        NODE_HEIGHT +
+        element.y,
+    };
+
+    this.currentlyShownDeploymentsModels.set(element.id, {
+      boundingBox,
+    });
+
+    this.drawNodeConnections(
+      groupDef,
+      topNode,
+      relationshipTemplates,
+      positions
+    );
+    this.drawTopologyOverlay(groupDef, xMin - NODE_SHIFT_MARGIN / 2, xMax + NODE_WIDTH + NODE_SHIFT_MARGIN / 2, yMax + NODE_HEIGHT + NODE_SHIFT_MARGIN / 2);
   }
 
   drawTopologyOverlay(parentGfx, xMin, xMax, yMax) {
     svgPrepend(parentGfx, svgCreate("path", {
-      d: `M 0 ${80-NODE_SHIFT_MARGIN} L ${xMax.toFixed(2)} ${80-NODE_SHIFT_MARGIN} L ${xMax.toFixed(2)} ${yMax.toFixed(2)}   L ${xMin.toFixed(2)} ${yMax.toFixed(2)}   L ${xMin.toFixed(2)} ${80-NODE_SHIFT_MARGIN}  L 0 ${80-NODE_SHIFT_MARGIN}  Z`,
-      fill: "none",
+      d: `M 0 ${80 - NODE_SHIFT_MARGIN} L ${xMax.toFixed(2)} ${80 - NODE_SHIFT_MARGIN} L ${xMax.toFixed(2)} ${yMax.toFixed(2)}   L ${xMin.toFixed(2)} ${yMax.toFixed(2)}   L ${xMin.toFixed(2)} ${80 - NODE_SHIFT_MARGIN}  L 0 ${80 - NODE_SHIFT_MARGIN}  Z`,
+      fill: "white",
       stroke: "#777777",
       "pointer-events": "all"
-  }));
-}
-
-  removeDeploymentModel(parentGfx, element) {
-      const group = select(parentGfx, '#' + DEPLOYMENT_GROUP_ID);
-      if (group) {
-          group.remove();
-      }
+    }));
   }
 
   drawNodeConnections(
-      parentGfx,
-      topNode,
-      relationshipTemplates,
-      nodePositions
-    ) {
-      const connectionCountAtNodeLocation = new Map();
-      const connections = [];
-  
-      const addToPort = (nodeRef, location) => {
-        const key = nodeRef + "-" + location;
-        let position;
-        if (connectionCountAtNodeLocation.has(key)) {
-          position = connectionCountAtNodeLocation.get(key) + 1;
-        } else {
-          position = 1;
-        }
-        connectionCountAtNodeLocation.set(key, position);
-        return position;
-      };
-  
-      const addConnection = (
-        sourceNode,
-        sourceLocation,
-        target,
-        targetLocation,
-        connectionName
-      ) => {
-        connections.push({
-          source: sourceNode,
-          target,
-          sourceLocation,
-          targetLocation,
-          sourcePortIndex: addToPort(sourceNode.ref, sourceLocation),
-          targetPortIndex: addToPort(target.ref, targetLocation),
-          connectionName,
-        });
-      };
-  
-      for (let relationshipTemplate of relationshipTemplates) {
-        const sourceRef = relationshipTemplate.sourceElement.ref;
-        const targetRef = relationshipTemplate.targetElement.ref;
-        const source = {
-          width: NODE_WIDTH,
-          height: sourceRef === topNode.id ? 80 : NODE_HEIGHT,
-          ref: sourceRef,
-          ...nodePositions.get(sourceRef),
-        };
-        const target = {
-          width: NODE_WIDTH,
-          height: sourceRef === topNode.id ? 80 : NODE_HEIGHT,
-          ref: targetRef,
-          ...nodePositions.get(targetRef),
-        };
-        const orientation = getOrientation(source, target, 0);
-  
-        switch (orientation) {
-          case "intersect":
-          case "bottom":
-            addConnection(
-              source,
-              "north",
-              target,
-              "south",
-              relationshipTemplate.name
-            );
-            break;
-          case "top":
-            addConnection(
-              source,
-              "south",
-              target,
-              "north",
-              relationshipTemplate.name
-            );
-            break;
-          case "right":
-            addConnection(
-              source,
-              "east",
-              target,
-              "west",
-              relationshipTemplate.name
-            );
-            break;
-          case "left":
-            addConnection(
-              source,
-              "west",
-              target,
-              "east",
-              relationshipTemplate.name
-            );
-            break;
-          case "top-left":
-            addConnection(
-              source,
-              "south",
-              target,
-              "east",
-              relationshipTemplate.name
-            );
-            break;
-          case "top-right":
-            addConnection(
-              source,
-              "south",
-              target,
-              "west",
-              relationshipTemplate.name
-            );
-            break;
-          case "bottom-left":
-            addConnection(
-              source,
-              "north",
-              target,
-              "east",
-              relationshipTemplate.name
-            );
-            break;
-          case "bottom-right":
-            addConnection(
-              source,
-              "north",
-              target,
-              "west",
-              relationshipTemplate.name
-            );
-            break;
-          default:
-            return;
-        }
+    parentGfx,
+    topNode,
+    relationshipTemplates,
+    nodePositions
+  ) {
+    const connectionsAtNodeLocations = new Map();
+    const connections = [];
+
+    const addToPort = (node, location, otherNode) => {
+      const key = node.ref + "-" + location;
+      let nodesAtPort = connectionsAtNodeLocations.get(key);
+      if (!nodesAtPort) {
+        nodesAtPort = [];
+        connectionsAtNodeLocations.set(key, nodesAtPort);
       }
-  
-      for (const connection of connections) {
-        const getPortPoint = (element, location, locationIndex) => {
-          const portCount = connectionCountAtNodeLocation.get(
-            element.ref + "-" + location
+      nodesAtPort.push(otherNode);
+    };
+
+    const addConnection = (
+      source,
+      sourceLocation,
+      target,
+      targetLocation,
+      connectionName
+    ) => {
+      addToPort(source, sourceLocation, target);
+      addToPort(target, targetLocation, source);
+      connections.push({
+        source,
+        target,
+        sourceLocation,
+        targetLocation,
+        connectionName,
+      });
+    };
+
+    for (let relationshipTemplate of relationshipTemplates) {
+      const sourceRef = relationshipTemplate.sourceElement.ref;
+      const targetRef = relationshipTemplate.targetElement.ref;
+      const source = {
+        width: NODE_WIDTH,
+        height: sourceRef === topNode.id ? 80 : NODE_HEIGHT,
+        ref: sourceRef,
+        ...nodePositions.get(sourceRef),
+      };
+      const target = {
+        width: NODE_WIDTH,
+        height: sourceRef === topNode.id ? 80 : NODE_HEIGHT,
+        ref: targetRef,
+        ...nodePositions.get(targetRef),
+      };
+      const orientation = getOrientation(source, target, 0);
+
+      switch (orientation) {
+        case "intersect":
+        case "bottom":
+          addConnection(
+            source,
+            "north",
+            target,
+            "south",
+            relationshipTemplate.name
           );
-          if (location === "north") {
-            return {
-              x: element.x + (element.width / (portCount + 1)) * locationIndex,
-              y: element.y,
-            };
-          } else if (location === "south") {
-            return {
-              x: element.x + (element.width / (portCount + 1)) * locationIndex,
-              y: element.y + element.height,
-            };
-          } else if (location === "east") {
-            return {
-              x: element.x,
-              y: element.y + (element.height / (portCount + 1)) * locationIndex,
-            };
-          } else if (location === "west") {
-            return {
-              x: element.x + element.width,
-              y: element.y + (element.height / (portCount + 1)) * locationIndex,
-            };
-          }
-        };
-  
-        const getSimpleDirection = (direction) =>
-          direction === "north" || direction === "south" ? "v" : "h";
-  
-        const points = connectPoints(
-          getPortPoint(
-            connection.source,
-            connection.sourceLocation,
-            connection.sourcePortIndex
-          ),
-          getPortPoint(
-            connection.target,
-            connection.targetLocation,
-            connection.targetPortIndex
-          ),
-          getSimpleDirection(connection.sourceLocation) +
-            ":" +
-            getSimpleDirection(connection.targetLocation)
-        );
-  
-        const line = createLine(
-          points,
-          this.styles.computeStyle({}, ["no-fill"], {
-            ...STROKE_STYLE,
-            markerEnd: `url(#${DEPLOYMENT_REL_MARKER_ID})`,
-          }),
-          5
-        );
-  
-        const labelGroup = svgCreate("g");
-  
-        const pathLength = line.getTotalLength();
-        const middlePoint = line.getPointAtLength(pathLength / 2);
-        svgAttr(labelGroup, {
-          transform: `matrix(1, 0, 0, 1, ${(
-            middlePoint.x -
-            LABEL_WIDTH / 2
-          ).toFixed(2)}, ${(middlePoint.y - LABEL_HEIGHT / 2).toFixed(2)})`,
-        });
-        const backgroundRect = svgCreate("rect", {
-          width: LABEL_WIDTH,
-          height: LABEL_HEIGHT,
-          fill: "#EEEEEE",
-          fillOpacity: 0.75,
-        });
-        svgAppend(labelGroup, backgroundRect);
-        const text = this.textRenderer.createText(connection.connectionName, {
-          box: {
-            width: LABEL_WIDTH,
-            height: LABEL_HEIGHT,
-          },
-          align: "center-middle",
-          style: {
-            fontSize: 10,
-          },
-        });
-        svgAppend(labelGroup, text);
-        parentGfx.prepend(labelGroup);
-        parentGfx.prepend(line);
+          break;
+        case "top":
+          addConnection(
+            source,
+            "south",
+            target,
+            "north",
+            relationshipTemplate.name
+          );
+          break;
+        case "right":
+          addConnection(
+            source,
+            "east",
+            target,
+            "west",
+            relationshipTemplate.name
+          );
+          break;
+        case "left":
+          addConnection(
+            source,
+            "west",
+            target,
+            "east",
+            relationshipTemplate.name
+          );
+          break;
+        case "top-left":
+          addConnection(
+            source,
+            "south",
+            target,
+            "east",
+            relationshipTemplate.name
+          );
+          break;
+        case "top-right":
+          addConnection(
+            source,
+            "south",
+            target,
+            "west",
+            relationshipTemplate.name
+          );
+          break;
+        case "bottom-left":
+          addConnection(
+            source,
+            "north",
+            target,
+            "east",
+            relationshipTemplate.name
+          );
+          break;
+        case "bottom-right":
+          addConnection(
+            source,
+            "north",
+            target,
+            "west",
+            relationshipTemplate.name
+          );
+          break;
+        default:
+          return;
       }
     }
 
-  drawNodeTemplate(parentGfx, nodeTemplate, position) {
-      const groupDef = svgCreate("g");
-      svgAttr(groupDef, {
-        transform: `matrix(1, 0, 0, 1, ${position.x.toFixed(
-          2
-        )}, ${position.y.toFixed(2)})`,
+    for (const connection of connections) {
+      const getPortPoint = (element, location, otherNode) => {
+        const connectionsAtNodeLocation = connectionsAtNodeLocations.get(
+          element.ref + "-" + location
+        );
+        const locationIndex = connectionsAtNodeLocation.indexOf(otherNode) + 1;
+        const portCount = connectionsAtNodeLocation.length;
+        if (location === "north") {
+          return {
+            x: element.x + (element.width / (portCount + 1)) * locationIndex,
+            y: element.y,
+          };
+        } else if (location === "south") {
+          return {
+            x: element.x + (element.width / (portCount + 1)) * locationIndex,
+            y: element.y + element.height,
+          };
+        } else if (location === "east") {
+          return {
+            x: element.x,
+            y: element.y + (element.height / (portCount + 1)) * locationIndex,
+          };
+        } else if (location === "west") {
+          return {
+            x: element.x + element.width,
+            y: element.y + (element.height / (portCount + 1)) * locationIndex,
+          };
+        }
+      };
+
+      const getSimpleDirection = (direction) =>
+        direction === "north" || direction === "south" ? "v" : "h";
+
+      connectionsAtNodeLocations.forEach((value) => {
+        if (value.length > 1) {
+          value.sort((a, b) => {
+            return a.y - b.y;
+          });
+        }
       });
-      const rect = svgCreate("rect", {
-        width: NODE_WIDTH,
-        height: NODE_HEIGHT,
-        fill: "#DDDDDD",
-        ...STROKE_STYLE,
+
+      const points = connectPoints(
+        getPortPoint(
+          connection.source,
+          connection.sourceLocation,
+          connection.target
+        ),
+        getPortPoint(
+          connection.target,
+          connection.targetLocation,
+          connection.source
+        ),
+        getSimpleDirection(connection.sourceLocation) +
+        ":" +
+        getSimpleDirection(connection.targetLocation)
+      );
+
+      const line = createLine(
+        points,
+        this.styles.computeStyle({}, ["no-fill"], {
+          ...STROKE_STYLE,
+          markerEnd: `url(#${DEPLOYMENT_REL_MARKER_ID})`,
+        }),
+        5
+      );
+
+      const labelGroup = svgCreate("g");
+
+      const pathLength = line.getTotalLength();
+      const middlePoint = line.getPointAtLength(pathLength / 2);
+      svgAttr(labelGroup, {
+        transform: `matrix(1, 0, 0, 1, ${(
+          middlePoint.x -
+          LABEL_WIDTH / 2
+        ).toFixed(2)}, ${(middlePoint.y - LABEL_HEIGHT / 2).toFixed(2)})`,
       });
-  
-      svgAppend(groupDef, rect);
-  
-      const text = this.textRenderer.createText(nodeTemplate.name, {
+      const backgroundRect = svgCreate("rect", {
+        width: LABEL_WIDTH,
+        height: LABEL_HEIGHT,
+        fill: "#EEEEEE",
+        fillOpacity: 0.75,
+      });
+      svgAppend(labelGroup, backgroundRect);
+      const text = this.textRenderer.createText(connection.connectionName, {
         box: {
-          width: NODE_WIDTH,
-          height: NODE_HEIGHT / 2,
-        },
-        align: "center-middle",
-      });
-  
-      svgAppend(groupDef, text);
-  
-      const groupDef2 = svgCreate("g");
-      svgAttr(groupDef2, {
-        transform: `matrix(1, 0, 0, 1, ${position.x.toFixed(2)}, ${(
-          position.y +
-          NODE_HEIGHT / 2
-        ).toFixed(2)})`,
-      });
-  
-      const namePattern = /\}(.*)/g;
-      const typeMatches = namePattern.exec(nodeTemplate.type);
-      let typeName;
-      if (typeMatches === null || typeMatches.length === 0) {
-        typeName = nodeTemplate.type;
-      } else {
-        typeName = typeMatches[1];
-      }
-  
-      const typeText = this.textRenderer.createText("(" + typeName + ")", {
-        box: {
-          width: NODE_WIDTH,
-          height: NODE_HEIGHT / 2,
+          width: LABEL_WIDTH,
+          height: LABEL_HEIGHT,
         },
         align: "center-middle",
         style: {
-          fill: "#777777",
+          fontSize: 10,
         },
       });
-  
-      svgAppend(groupDef2, typeText);
-      parentGfx.append(groupDef);
-      parentGfx.append(groupDef2);
+      svgAppend(labelGroup, text);
+      parentGfx.prepend(labelGroup);
+      parentGfx.prepend(line);
     }
+  }
+
+  removeDeploymentModel(parentGfx, element) {
+    this.currentlyShownDeploymentsModels.delete(element.id);
+    const group = svgSelect(parentGfx, "#" + DEPLOYMENT_GROUP_ID);
+    if (group) {
+      group.remove();
+    }
+  }
+
+  drawNodeTemplate(parentGfx, nodeTemplate, position) {
+    const groupDef = svgCreate("g");
+    svgAttr(groupDef, {
+      transform: `matrix(1, 0, 0, 1, ${position.x.toFixed(
+        2
+      )}, ${position.y.toFixed(2)})`,
+    });
+    const rect = svgCreate("rect", {
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+      fill: "#DDDDDD",
+      ...STROKE_STYLE,
+    });
+
+    svgAppend(groupDef, rect);
+
+    const text = this.textRenderer.createText(nodeTemplate.name, {
+      box: {
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT / 2,
+      },
+      align: "center-middle",
+    });
+
+    svgAppend(groupDef, text);
+
+    const groupDef2 = svgCreate("g");
+    svgAttr(groupDef2, {
+      transform: `matrix(1, 0, 0, 1, ${position.x.toFixed(2)}, ${(
+        position.y +
+        NODE_HEIGHT / 2
+      ).toFixed(2)})`,
+    });
+
+    const namePattern = /\}(.*)/g;
+    const typeMatches = namePattern.exec(nodeTemplate.type);
+    let typeName;
+    if (typeMatches === null || typeMatches.length === 0) {
+      typeName = nodeTemplate.type;
+    } else {
+      typeName = typeMatches[1];
+    }
+
+    const typeText = this.textRenderer.createText("(" + typeName + ")", {
+      box: {
+        width: NODE_WIDTH,
+        height: NODE_HEIGHT / 2,
+      },
+      align: "center-middle",
+      style: {
+        fill: "#777777",
+      },
+    });
+
+    svgAppend(groupDef2, typeText);
+    parentGfx.append(groupDef);
+    parentGfx.append(groupDef2);
+  }
+
+  renderer(type) {
+    return this.handlers[type];
+  }
+
+  canRender(element) {
+    // only return true if handler for rendering is registered
+    return this.openToscaHandlers[element.type];
+  }
+
+  drawShape(parentNode, element) {
+    if (element.type in this.openToscaHandlers) {
+      const h = this.openToscaHandlers[element.type];
+      return h(this, parentNode, element);
+    }
+    return super.drawShape(parentNode, element);
+  }
 }

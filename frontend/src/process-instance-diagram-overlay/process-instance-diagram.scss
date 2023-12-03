@@ -8,3 +8,58 @@
   top: -1000px !important;
   left: -1000px !important;
 }
+
+.overlay-text {
+  background-color: white;
+  color: black;
+  font-size: 14px;
+  padding: 25px 20px;
+  border-radius: 5px;
+  width: 50%;
+  height: 50%;
+  stroke: black;
+}
+
+.quantum-view-picture {
+  height: 300px;
+}
+
+.data-overlay {
+  position: relative;
+  width: 320px;
+  padding: 10px;
+  margin: 3em;
+  background-color: #FFF;
+  color: #666;
+  font: normal 12px "Segoe UI", Arial, Sans-serif;
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+  border: 3px solid black;
+}
+
+.data-overlay p {
+  font-size: 1.25em;
+}
+
+.data-overlay:before,
+.data-overlay:after {
+  content: "\0020";
+  display: block;
+  position: absolute;
+  bottom: -17px;
+  left: 20px;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  border: solid 20px transparent;
+  border-bottom: 0;
+  border-top-color: #FFF;
+}
+
+.data-overlay:before {
+  bottom: -20px;
+  z-index: 1;
+  border-top-color: black;
+}

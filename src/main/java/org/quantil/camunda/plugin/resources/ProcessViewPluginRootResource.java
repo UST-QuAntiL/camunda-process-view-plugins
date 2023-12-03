@@ -103,4 +103,30 @@ public class ProcessViewPluginRootResource extends AbstractPluginRootResource {
     System.out.println("New active process view has name: " + newProcessView);
     return Response.ok().build();
   }
+
+  @POST
+  @Path("{engineName}/process-instance/{processInstanceId}/change-view/{viewId}")
+  public Response switchToProcessView(@Context UriInfo uriInfo, @PathParam("engineName") String engineName,
+                                          @PathParam("processInstanceId") String processInstanceId,
+                                          @PathParam("viewId") String viewId) throws IOException {
+                                            
+    // workaround to access the Camunda REST API, as the Java API does not provide all required details
+    String baseUrl = "http://" + uriInfo.getAbsolutePath().getHost() + ":" + uriInfo.getAbsolutePath().getPort();
+    System.out.println("Received request for host and port: " + baseUrl);
+
+    // get runtime service to access variables of process instances
+    ProcessEngine processEngine = ProcessEngines.getProcessEngine(engineName);
+    RuntimeService runtimeService = processEngine.getRuntimeService();
+
+    // get variable storing the active process view
+    Object activeProcessViewVariable = runtimeService.getVariable(processInstanceId, "process-view-extension-active-view");
+    if (Objects.isNull(activeProcessViewVariable)){
+      return Response.status(404).build();
+    }
+    String activeProcessView = activeProcessViewVariable.toString();
+
+    ProcessViewService processViewService = new ProcessViewService();
+    runtimeService.setVariable(processInstanceId, "process-view-extension-active-view", viewId);
+    return Response.ok().build();
+  }
 }

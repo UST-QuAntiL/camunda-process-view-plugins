@@ -13,7 +13,6 @@ import React from "react";
 import ReactDOM from "react-dom";
 
 import ProcessViewButton from "./process-instance-runtime-action/ProcessViewButton";
-import DeploymentViewButton from "./process-instance-runtime-action/DeploymentViewButton.js";
 import {renderTable} from "./process-instance-runtime-tab/ViewVariablesTable";
 import {renderOverlay} from "./process-instance-diagram-overlay/ViewOverlay";
 import {renderDeploymentInformationTable} from "./deployment-information-table.js";
