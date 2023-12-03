@@ -21,41 +21,45 @@
 }
 
 .quantum-view-picture {
-  width: 300px;
   height: 300px;
 }
 
-.txt_First {
-  font-size:0.8em;
-  text-align: justify;
-  padding-bottom:20px;
-}
-.djs-element:hover + .com_box {
-  display: block;
+.data-overlay {
+  position: relative;
+  width: 320px;
+  padding: 10px;
+  margin: 3em;
+  background-color: #FFF;
+  color: #666;
+  font: normal 12px "Segoe UI", Arial, Sans-serif;
+  -moz-border-radius: 10px;
+  -webkit-border-radius: 10px;
+  border-radius: 10px;
+  border: 3px solid black;
 }
 
-.com_box {
-  width:250px;
-  height: 100px;
-  background: white;
-  color:black;
-  margin-right:8px;
-  margin-bottom: 5px;
-  margin-top:1px;
-  position: relative;
-  border-color: black;
-  border: 1px solid black;
-  padding-left: 5px;
+.data-overlay p {
+  font-size: 1.25em;
 }
-.com_box::after {
-  content: '';
+
+.data-overlay:before,
+.data-overlay:after {
+  content: "\0020";
+  display: block;
   position: absolute;
-  top: 100%;
-  right: 50%;
+  bottom: -17px;
+  left: 20px;
+  z-index: 2;
   width: 0;
   height: 0;
-  border-style: solid;
-  border-width: 0 20px 20px 0;
-  border-color: transparent black transparent transparent;
-  background-color: white; /* Filling color */
+  overflow: hidden;
+  border: solid 20px transparent;
+  border-bottom: 0;
+  border-top-color: #FFF;
+}
+
+.data-overlay:before {
+  bottom: -20px;
+  z-index: 1;
+  border-top-color: black;
 }

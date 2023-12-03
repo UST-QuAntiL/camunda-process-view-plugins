@@ -41,6 +41,40 @@ function ProcessViewButton({ camundaAPI, processInstanceId }) {
         });
     }, []);
 
+    async function openDeploymentView() {
+        const rawResponse = await fetch(`/engine-rest/process-instance/${processInstanceId}`,
+            {
+                method: 'GET',
+                headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+                }
+            });
+        const response = await rawResponse.json();
+
+        if (!rawResponse.ok) {
+            throw new Error(`Failed to fetch process instance: ${response.message}`);
+        }
+
+        console.log('Switching to next view resulted in: ', response);
+        const definitionId = response.definitionId;
+        const splitDefinitionId = definitionId.split(':');
+        const result = splitDefinitionId[0] + '.bpmn';
+        setActivatedView(result);
+        const updateview = await fetch(processViewEndpoint + '/change-view/' + result,
+        {
+            method: 'POST', body: '{}',
+            headers: {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
+            }
+        });
+        console.log('Currently activated view: ', result)
+        location.reload();
+    }
+
     async function openDialog(activatedView) {
         console.log('Switching from currently activated view: ', activatedView);
 
@@ -59,6 +93,7 @@ function ProcessViewButton({ camundaAPI, processInstanceId }) {
         location.reload();
     }
 
+
     function triggerDeployment() {
         const deploymentButton = document.getElementById("deploymentButton");
         if (deploymentButton) {
@@ -66,15 +101,14 @@ function ProcessViewButton({ camundaAPI, processInstanceId }) {
         } else {
             console.error("Button not found");
         }
-
     }
 
     return (
         <>
-            <button className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Quantum View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
+            <button id="quantum-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Quantum View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
                 <img class="process-view-button-picture" src="https://raw.githubusercontent.com/LaviniaStiliadou/camunda-process-views-plugin/feature/remove-overlays/frontend/resources/QuantumViewIcon.svg" />
             </button>
-            <button className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Deployment View" onClick={() => triggerDeployment()} tooltip-placement="left">
+            <button id="deployment-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Deployment View" onClick={() => { openDeploymentView(); triggerDeployment() }} tooltip-placement="left">
                 <img class="process-view-button-picture" src="https://raw.githubusercontent.com/LaviniaStiliadou/camunda-process-views-plugin/feature/remove-overlays/frontend/resources/DeploymentViewIcon.svg" />
             </button>
         </>

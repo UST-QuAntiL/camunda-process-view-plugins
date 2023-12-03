@@ -19,11 +19,13 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
     let showSubProcesses = false;
     let showTasks = false;
     const drilldownOverlayBehavior = viewer.get("drilldownOverlayBehavior");
+    new OpenTOSCARenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
 
     const update = (showSubProcesses) => {
         const subProcesses = [];
         const tasks = [];
         const findSubprocesses = (element) => {
+            console.log(element);
             if (element.businessObject.get('opentosca:deploymentModelUrl')) {
                 subProcesses.push(element);
             }
@@ -36,22 +38,31 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
         canvas.getRootElement().children.forEach(findSubprocesses)
         for (const subProcess of subProcesses) {
             const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask";
-        
-            // only change shape if it is a valid deployment model
+
+            // only change shape if it is a valid deployment model and onDemand
             if (subProcess.type !== newType && !subProcess.businessObject.get('opentosca:deploymentModelUrl').includes("wineryEndpoint")) {
-                canvas.removeShape(subProcess);
-                subProcess.type = newType;
-                canvas.addShape(subProcess);
+
+                // trigger the render shape event
+                if (subProcess.businessObject.get('opentosca:onDemand') === "true") {
+                    canvas.removeShape(subProcess);
+                    subProcess.type = newType;
+                    canvas.addShape(subProcess);
+                } else {
+                    if (showSubProcesses) {
+                        console.log("removeShape");
+                        canvas.removeShape(subProcess);
+                        canvas.addShape(subProcess);
+                    }
+                }
+
                 if (showSubProcesses) {
                     drilldownOverlayBehavior.addOverlay(subProcess);
                 }
             }
         }
-
     }
     update(showSubProcesses);
     actionButtonElement.addEventListener("click", () => {
-        new OpenTOSCARenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
         showSubProcesses = !showSubProcesses;
         showTasks = !showTasks;
         update(showSubProcesses);

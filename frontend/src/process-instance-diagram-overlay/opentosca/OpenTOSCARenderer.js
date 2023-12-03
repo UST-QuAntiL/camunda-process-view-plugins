@@ -120,13 +120,13 @@ export default class OpenTOSCARenderer {
       const type = evt.type;
       const element = context.element;
       const parentGfx = context.gfx;
-
+      console.log("render")
+      console.log(element);
       if (element.type === SERVICE_TASK_TYPE) {
         if (type === 'render.shape') {
           let task = bpmnRenderer.drawShape(parentGfx, element);
           this.addSubprocessView(parentGfx, element, bpmnRenderer);
           this.showDeploymentModel(parentGfx, element);
-          //(parentGfx, getQuantMESVG("TASK_TYPE_RESULT_COMBINATION"), null, true);
           return task;
         }
       }
@@ -170,7 +170,8 @@ export default class OpenTOSCARenderer {
 
   addSubprocessView(parentGfx, element, bpmnRenderer) {
     let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
-    if (!deploymentModelUrl) return;
+    let onDemand = element.businessObject.get('opentosca:onDemand');
+    if (!deploymentModelUrl || onDemand !== "true") return;
 
     let groupDef = svgCreate('g');
 

@@ -37,13 +37,6 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let activeView = response['activeProcessView'];
     let activeViewXml = response['activeProcessViewXml'];
     console.log("Active view to visualize process view overlay for: ", activeView);
-
-    // do not change xml if executed workflow equals current view
-    if (!activeView.includes('view-before-rewriting')) {
-        console.log("Current view equals executed workflow. No overlay required!");
-        return;
-    }
-
     // get element registry and overlays to retrieve elements and attach new overlays to them
     let overlays = viewer.get("overlays");
     let canvas = viewer.get("canvas");
@@ -55,6 +48,40 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     console.log('Diagram contains the following elements: ', elementArray);
 
     let allElements = viewerElementRegistry.getAll();
+
+    // add deployment view overlay
+    if (!activeView.includes('view-before-rewriting')) {
+        console.log("add deployment view overlay")
+        let variables = await getVariables(camundaAPI, processInstanceId);
+        console.log(variables);
+        for (let diagramElement of allElements) {
+            let deploymentBuildPlanInstanceUrl = diagramElement.id + "_deploymentBuildPlanInstanceUrl";
+            if (variables.hasOwnProperty(deploymentBuildPlanInstanceUrl)) {
+                let value = variables[deploymentBuildPlanInstanceUrl].value;
+
+                console.log(deploymentBuildPlanInstanceUrl);
+                if (variable.name === deploymentBuildPlanInstanceUrl) {
+                    let value = variable.value;
+                    console.log(value);
+                    let vmNetwork = await getVMNetworkId(value);
+                    if (vmNetwork !== undefined) {
+                        console.log(vmNetwork)
+                        let characteristics = await getVMQProvData("http://193.196.54.228:8094/qprov", vmNetwork);
+                        for (const [variable, value] of Object.entries(characteristics)) {
+                            console.log(`${variable}: ${value}`);
+                        }
+                    }
+                }
+            } else {
+                return undefined; // Variable not found
+            }
+
+        }
+
+        console.log("Current view equals executed workflow. No overlay required!");
+        return;
+    }
+
     elementArray = elementArray.filter(element => element.type === 'bpmn:Process');
     console.log('Found ' + elementArray.length + ' flow elements of type "bpmn:Process"!');
 
@@ -114,7 +141,11 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 async function computeOverlay(camundaAPI, processInstanceId, diagramElements, elementArray) {
     console.log("Register overlay for diagram elements ", diagramElements);
     let variables = await getVariables(camundaAPI, processInstanceId);
-    for (let diagramElement of diagramElements) {
+    let filteredDiagramElements = diagramElements.filter(diagramElement => {
+        let attrs = diagramElement.businessObject.$attrs;
+        return attrs !== undefined && attrs["quantme:quantmeTaskType"] !== undefined;
+    });
+    for (let diagramElement of filteredDiagramElements) {
         let top = diagramElement.y + diagramElement.height + 11;
         let x = diagramElement.x;
         let overlayTop = diagramElement.y - 150;
@@ -158,15 +189,21 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         let fileVariables = [];
         let variableText = variablesToDisplay.map(variableName => {
             if (variableName !== "circuit") {
+                console.log("GET VARIABLE")
+                console.log(variableName);
                 const variable = variables[variableName];
-                const variableValue = variable.value;
-                const variableType = variable.type;
-                console.log(variableType);
-                if (variableType !== "File") {
-                    const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
-                    return `${variableName}: ${formattedValue}`
-                } else {
-                    fileVariables.push(variableName);
+                if (variable !== undefined) {
+                    console.log(variable);
+                    const variableValue = variable.value;
+                    console.log(variableValue)
+                    const variableType = variable.type;
+                    console.log(variableType);
+                    if (variableType !== "File") {
+                        const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
+                        return `<strong>${variableName}</strong>: ${formattedValue}`
+                    } else {
+                        fileVariables.push(variableName);
+                    }
                 }
             }
         }).join('<br>');
@@ -176,12 +213,12 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
             let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
             console.log(value);
-            variableText = variableText + '<br>' + (`${fileVariable}: <img class="quantum-view-picture" src=${value} />`)
+            variableText = variableText + '<br>' + (`${fileVariable}: <img class="quantum-view-picture" src=${value} style="width: 50%;/>`)
         }
 
         let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
         console.log("the response from QProv");
-        console.log(providerId)
+        console.log(providerId);
 
         let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, "ibmq_qasm_simulator");
         console.log("QProv Data")
@@ -204,7 +241,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                     let childTop = child.y + child.height + 11;
                     console.log(child)
                     console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
-                    
+
                     if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
                         if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
                             const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
@@ -214,7 +251,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                         <span class="badge badge-important instance-incidents" style="display: none;"></span>
                     </div>
                 </div>
-            <div class="com_box" style="position: absolute; left: ${child.x}px; top: ${childTop}px">${qProvText}</div>
+                <div class="data-overlay" style="position: absolute; left: ${child.x}px; top: ${childTop}px"><p>${qProvText}</p></div>
             </div>`;
                             entryPoint.html = html;
                             // Append the overlay HTML to the selected element
@@ -226,15 +263,24 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         } else {
 
             let overlaySize = variablesToDisplay.length * 40;
+            let positionTop = overlayTop - (overlaySize / 2)+20;
+            let leftPosition = diagramElement.x - 50;
+
             const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-                <div class="com_box" style="position: absolute; left: ${diagramElement.x}px; top: ${overlayTop}px; height: ${overlaySize}px">${variableText}</div>
+            <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px">${variableText}</p></div>
             </div>`;
-            diagramElement.html = html;
+            if (variableText !== '') {
+                console.log("VARIABLESTEXT");
+                console.log(diagramElement.id);
+                console.log(diagramElement);
+                diagramElement.html = html;
+            }
             if (attributes["quantme:quantmeTaskType"] !== undefined) {
                 if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumCircuitExecutionTask") {
-                    overlaySize = 10 * 40;
+                    overlaySize = 10 * 20;
+                    positionTop = overlayTop - (overlaySize / 2) - 10;
                     let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-                    <div class="com_box" style="position: absolute; left: ${diagramElement.x}px; top: ${overlayTop}px; height: ${overlaySize}px">${qProvText}</div>
+                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px">${qProvText}</p></div>
                 </div>`;
                     diagramElement.html = exehtml;
                 }
@@ -256,20 +302,61 @@ function registerOverlay(diagramElements) {
     for (let diagramElement of diagramElements) {
         console.log(diagramElement);
         let visualElements = document.querySelector(`g.djs-element[data-element-id="${diagramElement.id}"]`);
-        if (visualElements !== null && diagramElement.type !== "bpmn:SequenceFlow") {
-            console.log(visualElements);
-            const addedHtml = diagramElement.html;
-            console.log(addedHtml);
-            if (addedHtml !== null && addedHtml !== undefined) {
-                visualElements.addEventListener('mouseenter', function () {
-                    selectedElement.insertAdjacentHTML('beforeend', diagramElement.html);
-                    console.log('Mouse entered a visual element!');
-                });
-                visualElements.addEventListener('mouseleave', function () {
-                    selectedElement.innerHTML = selectedElement.innerHTML.replace(addedHtml, '');
-                    //selectedElement.innererHTML = selectedElement.innerHTML.replace(addedHtml, '');
-                    console.log('Mouse left a visual element!');
-                });
+
+        let attrs = diagramElement.businessObject.$attrs;
+        if (attrs !== undefined) {
+            console.log(attrs["quantme:quantmeTaskType"]);
+
+
+            if (visualElements !== null && attrs["quantme:quantmeTaskType"] !== undefined) {
+                console.log(visualElements);
+                console.log(addedHtml);
+                const addedHtml = diagramElement.html;
+                var tempElement = document.createElement('div');
+                tempElement.innerHTML = diagramElement.html;
+                var domElement = tempElement.firstChild;
+                if (addedHtml !== null && addedHtml !== undefined) {
+                    visualElements.addEventListener('mouseenter', function () {
+                        console.log(selectedElement.innerHTML);
+                        if (!selectedElement.innerHTML.includes(addedHtml)) {
+                            console.log("add")
+                            console.log(diagramElement.html)
+                            selectedElement.insertAdjacentHTML('beforeend', diagramElement.html);
+                            console.log('Mouse entered a visual element!');
+                        }
+                    });
+                    visualElements.addEventListener('mouseleave', function () {
+                        console.log(selectedElement.innerHTML);
+                        console.log(addedHtml)
+                        console.log(selectedElement)
+                        console.log(domElement);
+                        // Iterate over each child of the parent element
+                        for (var i = 0; i < selectedElement.children.length; i++) {
+                            console.log("child")
+                            var child = selectedElement.children[i];
+                            console.log(child)
+
+                            // Check if the child has the data-element-id attribute
+                            if (child.hasAttribute("data-container-id")) {
+                                var dataElementId = child.getAttribute("data-container-id");
+                                var speechBubbleElement = child.querySelector('.data-overlay');
+                                console.log(speechBubbleElement)
+                                console.log(dataElementId);
+                                console.log(diagramElement.id)
+
+                                // Check if the data-element-id matches the target value
+                                if (dataElementId === diagramElement.id && speechBubbleElement !== null) {
+                                    // Remove the matching child
+                                    child.removeChild(speechBubbleElement);
+                                    console.log("Child element removed successfully.");
+                                }
+                            }
+                        }
+                        console.log(selectedElement)
+                        //selectedElement.innererHTML = selectedElement.innerHTML.replace(addedHtml, '');
+                        console.log('Mouse left a visual element!');
+                    });
+                }
             }
         }
     }
@@ -296,6 +383,25 @@ async function getActiveActivities(camundaAPI, processInstanceId) {
     )
     return (await res.json())['childActivityInstances'];
 
+}
+
+/**
+* Get the currently active activities for the given process instance
+*
+* @param buildPlanInstanceUrl the Camunda APIs to access the backend
+* @param processInstanceId the ID of the process instance to retrieve the active activity for
+* @returns an array with currently active activities
+*/
+async function getVMNetworkId(buildPlanInstanceUrl) {
+    console.log("Retrieving properties from URL: ", buildPlanInstanceUrl)
+    let res = await fetch(buildPlanInstanceUrl,
+        {
+            headers: {
+                'Accept': 'application/json',
+            }
+        }
+    )
+    return (await res.json()).inputs.find(input => input.name === "VMNetworks").value;
 }
 
 /**
@@ -393,18 +499,59 @@ async function getVariables(camundaAPI, processInstanceId) {
  * @param provider the ID of the provider to retrieve the id for
  * @returns the id of the provider
  */
+async function getVMQProvData(qProvEndpoint, vmNetworkId) {
+    const apiEndpoint = `${qProvEndpoint}/virtual-machines/${vmNetworkId}/characteristics`; // Updated variable name
+    console.log(apiEndpoint);
+    try {
+        const response = await fetch(apiEndpoint);
+        const data = await response.json();
+
+        // Extract the list of hardware characteristics
+        const hardwareCharacteristics = data._embedded.hardwareCharacteristicsDtoes;
+
+        // Sort the array based on the recordingTime in descending order
+        const sortedData = hardwareCharacteristics.sort((a, b) => new Date(b.recordingTime) - new Date(a.recordingTime));
+
+        // Get the data with the latest timestamp
+        const latestData = sortedData[0];
+
+        // Log the result
+        console.log(latestData);
+
+        if (latestData) {
+            return latestData;
+        } else {
+            console.log(`No data collected.`);
+            return null;
+        }
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        return null;
+    }
+}
+
+/**
+ * Get the id of the selected provider from QProv.
+ *
+ * @param qProvEndpoint the QProv endpoint to access the data
+ * @param provider the ID of the provider to retrieve the id for
+ * @returns the id of the provider
+ */
 async function getQProvProviderId(qProvEndpoint, providerName) {
     const apiEndpoint = `${qProvEndpoint}/providers`; // Updated variable name
+    console.log(apiEndpoint);
     try {
         const response = await fetch(apiEndpoint);
         const data = await response.json();
 
         // Find the provider with the given name
         const ibmqProvider = data._embedded.providerDtoes.find(provider => provider.name === providerName);
+        console.log(ibmqProvider);
 
         if (ibmqProvider) {
             // Extract the ID from the found provider
             const ibmqId = ibmqProvider.id;
+            console.log(ibmqId)
             return ibmqId;
         } else {
             console.log(`Provider with name "${providerName}" not found.`);
@@ -427,6 +574,7 @@ async function getQProvProviderId(qProvEndpoint, providerName) {
 async function getQPUData(qProvEndpoint, providerId, qpuName) {
     //http://localhost:8094/qprov/providers/4c490baf-9859-4e2f-9777-6309f93ceeea/qpus
     const apiEndpoint = `${qProvEndpoint}/providers/${providerId}/qpus`; // Updated variable name
+    console.log(apiEndpoint);
     try {
         const response = await fetch(apiEndpoint);
         const data = await response.json();
@@ -450,7 +598,12 @@ async function getQPUData(qProvEndpoint, providerId, qpuName) {
 
 function generateOverlayText(obj) {
     const variableText = Object.entries(obj)
-        .map(([variable, value]) => `<strong>${variable}:</strong> ${value}`)
+        .map(([variable, value]) => {
+            if (typeof value === 'number') {
+                value = value.toFixed(4);
+            }
+            return `<strong>${variable}:</strong> ${value}`;
+        })
         .join('<br>');
 
     return variableText;
