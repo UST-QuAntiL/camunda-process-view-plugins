@@ -145,7 +145,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
     // the default qpu
     let selectedQpu = '';
     if (variables["selected_qpu"]) {
-        selectedQpu = variables["selected_qpu"];
+        selectedQpu = variables["selected_qpu"].value;
     }
     let filteredDiagramElements = diagramElements.filter(diagramElement => {
         let attrs = diagramElement.businessObject.$attrs;
@@ -214,15 +214,15 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             }
         }).join('<br>');
 
-        let overlaySize = variablesToDisplay.length * 60;
-        let positionTop = overlayTop - (overlaySize / 2) + 40;
+        let overlaySize = variablesToDisplay.length * 80;
+        let positionTop = overlayTop - (overlaySize / 2) - 70;
         let leftPosition = diagramElement.x - 50;
         for (let fileVariable of fileVariables) {
             console.log("----fileVariable")
             let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
             let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
             console.log(value);
-            variableText = variableText + '<strong>' + (`${fileVariable}</strong><br>: <img class="quantum-view-picture" src="${value}" style="width: 70%;"/>`)
+            variableText = variableText + '<strong>' + (`${fileVariable}</strong>:<br> <img class="quantum-view-picture" src="${value}" style="max-width: 100%;height: auto;"/>`)
         }
 
         let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
