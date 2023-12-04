@@ -230,13 +230,13 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         console.log(providerId);
         let attributes = diagramElement.businessObject.$attrs;
         
-
+        let qProvText = '';
         if (selectedQpu !== '') {
 
             let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, selectedQpu);
             console.log("QProv Data")
             console.log(qprovData);
-            const qProvText = generateOverlayText(qprovData);
+            qProvText = generateOverlayText(qprovData);
             console.log("DAS DIAGRAM");
             console.log(diagramElement);
 
@@ -271,8 +271,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                     }
                 }
             }
-        } else {
-
+        } 
 
             const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
             <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px"><p>${variableText}</p></div>
@@ -295,7 +294,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                 }
             }
         }
-    }
+    
 }
 
 
