@@ -143,7 +143,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
     let variables = await getVariables(camundaAPI, processInstanceId);
 
     // the default qpu
-    let selectedQpu = "ibmq_qasm_simulator";
+    let selectedQpu = '';
     if (variables["selected_qpu"]) {
         selectedQpu = variables["selected_qpu"];
     }
@@ -214,43 +214,49 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             }
         }).join('<br>');
 
+        let overlaySize = variablesToDisplay.length * 60;
+        let positionTop = overlayTop - (overlaySize / 2) + 40;
+        let leftPosition = diagramElement.x - 50;
         for (let fileVariable of fileVariables) {
             console.log("----fileVariable")
             let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
             let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
             console.log(value);
-            variableText = variableText + '<br>' + (`${fileVariable}: <img class="quantum-view-picture" src=${value} style="width: 50%;/>`)
+            variableText = variableText + '<strong>' + (`${fileVariable}</strong><br>: <img class="quantum-view-picture" src="${value}" style="width: 70%;"/>`)
         }
 
         let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
         console.log("the response from QProv");
         console.log(providerId);
-
-        let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, selectedQpu);
-        console.log("QProv Data")
-        console.log(qprovData);
-        const qProvText = generateOverlayText(qprovData);
-        console.log("DAS DIAGRAM");
-        console.log(diagramElement);
-
         let attributes = diagramElement.businessObject.$attrs;
-        console.log(attributes);
-        if (attributes["quantme:containedElements"] !== undefined) {
-            if (attributes["quantme:containedElements"].includes(diagramElement.id)) {
+        
 
-                //let entryPoint = entryPoints[0];
-                // add overlay to the retrieved root element
-                let entryPoint = quantmeElementRegistry.get(diagramElement.id);
-                console.log(entryPoint);
+        if (selectedQpu !== '') {
 
-                for (let child of entryPoint.children) {
-                    let childTop = child.y + child.height + 11;
-                    console.log(child)
-                    console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
+            let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, selectedQpu);
+            console.log("QProv Data")
+            console.log(qprovData);
+            const qProvText = generateOverlayText(qprovData);
+            console.log("DAS DIAGRAM");
+            console.log(diagramElement);
 
-                    if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
-                        if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
-                            const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
+            console.log(attributes);
+            if (attributes["quantme:containedElements"] !== undefined) {
+                if (attributes["quantme:containedElements"].includes(diagramElement.id)) {
+
+                    //let entryPoint = entryPoints[0];
+                    // add overlay to the retrieved root element
+                    let entryPoint = quantmeElementRegistry.get(diagramElement.id);
+                    console.log(entryPoint);
+
+                    for (let child of entryPoint.children) {
+                        let childTop = child.y + child.height + 11;
+                        console.log(child)
+                        console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
+
+                        if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
+                            if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
+                                const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
                 <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${child.x}px; top: ${childTop}px; transform-origin: left top;">
                     <div class="activity-bottom-left-position instances-overlay">
                         <span class="badge instance-count" data-original-title="" title="">1</span>
@@ -259,30 +265,27 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                 </div>
                 <div class="data-overlay" style="position: absolute; left: ${child.x}px; top: ${childTop}px"><p>${qProvText}</p></div>
             </div>`;
-                            entryPoint.html = html;
-                            // Append the overlay HTML to the selected element
-                            // selectedElement.insertAdjacentHTML('beforeend', html);
+                                entryPoint.html = html;
+                            }
                         }
                     }
                 }
             }
         } else {
 
-            let overlaySize = variablesToDisplay.length * 40;
-            let positionTop = overlayTop - (overlaySize / 2) + 20;
-            let leftPosition = diagramElement.x - 50;
 
             const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-            <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px">${variableText}</p></div>
+            <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px"><p>${variableText}</p></div>
             </div>`;
-            if (variableText !== '') {
+            if (variableText !== '<br><br>') {
                 console.log("VARIABLESTEXT");
+                console.log(variableText)
                 console.log(diagramElement.id);
                 console.log(diagramElement);
                 diagramElement.html = html;
             }
             if (attributes["quantme:quantmeTaskType"] !== undefined) {
-                if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumCircuitExecutionTask") {
+                if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumCircuitExecutionTask" && selectedQpu !== '') {
                     overlaySize = 10 * 20;
                     positionTop = overlayTop - (overlaySize / 2) - 10;
                     let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
