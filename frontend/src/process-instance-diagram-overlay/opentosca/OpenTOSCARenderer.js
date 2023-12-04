@@ -20,7 +20,7 @@ import {
   append as svgAppend,
   attr as svgAttr,
   create as svgCreate,
-  select,
+  select as svgSelect,
   prepend as svgPrepend,
   innerSVG
 } from 'tiny-svg';
