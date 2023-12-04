@@ -277,7 +277,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
             <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px"><p>${variableText}</p></div>
             </div>`;
-            if (variableText !== '<br><br>') {
+            if (variableText !== '<br><br>' && variableText !== '') {
                 console.log("VARIABLESTEXT");
                 console.log(variableText)
                 console.log(diagramElement.id);
@@ -319,8 +319,9 @@ function registerOverlay(diagramElements) {
 
             if (visualElements !== null && attrs["quantme:quantmeTaskType"] !== undefined) {
                 console.log(visualElements);
-                console.log(addedHtml);
+                
                 const addedHtml = diagramElement.html;
+                console.log(addedHtml);
                 var tempElement = document.createElement('div');
                 tempElement.innerHTML = diagramElement.html;
                 var domElement = tempElement.firstChild;
