@@ -178,11 +178,11 @@ export default class OpenTOSCARenderer {
 
     let groupDef = svgCreate('g');
     svgAppend(parentGfx, svgCreate("path", {
-      d: "M -540 -10 L 890 -10 L 890 200 L 170 160 L 160 165 L 150 200 L -540 160 Z",
+      d: "M -600 -110 L 380 -110 L 380 190 L 55 190 L 50 195 L 45 190 L -600 190 Z",
       fill: "white",
       stroke: "#777777",
       "pointer-events": "all",
-      transform: "translate(-60, -200)"  // Move it up by setting the second parameter to -100
+      transform: "translate(270, -200) scale(1.5, 0.7)"
     }));
     
     let xShift = -590;
