@@ -11,7 +11,7 @@
 
 import OpenTOSCARenderer from "./process-instance-diagram-overlay/opentosca/OpenTOSCARenderer";
 
-export function addSubprocessToggleButton(viewer, options, { control }) {
+export async function addSubprocessToggleButton(viewer, options, { control }) {
     const canvas = viewer.get("canvas");
     const actionButtonElement = document.createElement("button");
     actionButtonElement.id = "deploymentButton";
@@ -22,11 +22,21 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
     new OpenTOSCARenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
     let eventBus = viewer.get("eventBus");
 
+    // extract the process instance id entry
+    let instanceIdElement = document.querySelector('.instance-id');
+    let extractedValue = "";
+    if (instanceIdElement) {
+        extractedValue = instanceIdElement.textContent.trim();
+        console.log(extractedValue);
+    } else {
+        console.log('Element not found');
+    }
+    let variables = await getVariables("", extractedValue);
+
     const update = (showSubProcesses) => {
         const subProcesses = [];
         const tasks = [];
         const findSubprocesses = (element) => {
-            
             if (element.businessObject.get('opentosca:deploymentModelUrl')) {
                 subProcesses.push(element);
             }
@@ -36,7 +46,16 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
                 }
             }
         }
-        canvas.getRootElement().children.forEach(findSubprocesses)
+        let children = canvas.getRootElement().children;
+        children.forEach(findSubprocesses);
+        for(let child of children) {
+            let qProvUrl = child.id + "_qProvUrl";
+            child.businessObject.$attrs.qProvUrl = qProvUrl;
+            if (variables.hasOwnProperty(qProvUrl)) {
+                let value = variables[qProvUrl].value;
+                child.businessObject.$attrs.qProvUrl = value;
+            }
+        }
         for (const subProcess of subProcesses) {
             const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask";
             console.log(showSubProcesses)
@@ -83,4 +102,18 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
         update(showSubProcesses);
     })
     control.addAction({ html: actionButtonElement })
+}
+
+async function getVariables(camundaAPI, processInstanceId) {
+    console.log("DIE API")
+    const activityInstanceEndpoint = `/engine-rest/process-instance/${processInstanceId}/variables`
+    console.log("Retrieving variables from URL: ", activityInstanceEndpoint)
+    let res = await fetch(activityInstanceEndpoint,
+        {
+            headers: {
+                'Accept': 'application/json'
+            }
+        }
+    )
+    return (await res.json());
 }
