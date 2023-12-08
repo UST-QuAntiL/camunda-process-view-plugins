@@ -178,15 +178,16 @@ export default class OpenTOSCARenderer {
 
     let groupDef = svgCreate('g');
     svgAppend(parentGfx, svgCreate("path", {
-      d: "M -600 -110 L 380 -110 L 380 190 L 55 190 L 50 195 L 45 190 L -600 190 Z",
+      d: "M -590 -110 L 380 -110 L 380 190 L -145 190 L -150 195 L -155 190 L -590 190 Z",
       fill: "white",
       stroke: "#777777",
       "pointer-events": "all",
-      transform: "translate(270, -200) scale(1.5, 0.7)"
+      transform: "translate(270, -147) scale(1.5, 0.7)"
     }));
     
     let xShift = -590;
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-78})` });
+    let yShift = -147;
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift})` });
 
     bpmnRenderer.drawShape(groupDef, {
       ...element,
@@ -203,14 +204,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift + 36, y: -60 },
-        { x: xShift + 86, y: -60 },
+        { x: xShift + 36, y: yShift+18 },
+        { x: xShift + 86, y: yShift+18 },
       ]
     });
     xShift += 86;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -226,14 +227,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift, y: -60 },
-        { x: xShift + 50, y: -60 },
+        { x: xShift, y: yShift+18 },
+        { x: xShift + 50, y: yShift+18 },
       ]
     });
     xShift += 50;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-86})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-8})` });
     // Draw the ExclusiveGateway shape
     bpmnRenderer.drawShape(groupDef, {
       ...element,
@@ -279,8 +280,8 @@ export default class OpenTOSCARenderer {
         name: "no"
       },
       waypoints: [
-        { x: xShift, y: -60 },
-        { x: xShift + 50, y: -60 },
+        { x: xShift, y: yShift+18 },
+        { x: xShift + 50, y: yShift+18 },
       ]
     });
     xShift += 50;
@@ -308,10 +309,10 @@ export default class OpenTOSCARenderer {
         name: "yes"
       },
       waypoints: [
-        { x: xShift-75, y: -15 },
-        { x: xShift + 100, y: 15 },
-        { x: xShift+250, y: 15 },
-        { x: xShift + 425, y: -15 },
+        { x: xShift-75, y: -25 },
+        { x: xShift + 100, y: -25 },
+        { x: xShift+250, y: -25 },
+        { x: xShift + 425, y: -25 },
       ]
     });
 
@@ -333,7 +334,7 @@ export default class OpenTOSCARenderer {
 
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -348,14 +349,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+100, y: -60 },
-        { x: xShift+150, y: -60 },
+        { x: xShift+100, y: yShift+18 },
+        { x: xShift+150, y: yShift+18 },
       ]
     });
     xShift += 150;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -370,14 +371,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+100, y: -60 },
-        { x: xShift+150, y: -60 },
+        { x: xShift+100, y: yShift+18 },
+        { x: xShift+150, y: yShift+18 },
       ]
     });
     xShift += 150;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-86})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-8})` });
     // Draw the ExclusiveGateway shape
     bpmnRenderer.drawShape(groupDef, {
       ...element,
@@ -416,8 +417,8 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+50, y: -60 },
-        { x: xShift + 100, y: -60 },
+        { x: xShift+50, y: yShift+18 },
+        { x: xShift + 100, y: yShift+18 },
       ]
     });
     xShift += 100;
@@ -438,7 +439,7 @@ export default class OpenTOSCARenderer {
       
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-86})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-8})` });
     // Draw the ExclusiveGateway shape
     bpmnRenderer.drawShape(groupDef, {
       ...element,
@@ -466,13 +467,13 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift, y: -60 },
-        { x: xShift + 50, y: -60 },
+        { x: xShift, y: yShift+18 },
+        { x: xShift + 50, y: yShift+18 },
       ]
     });
     xShift += 50;
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -488,14 +489,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift, y: -60 },
-        { x: xShift + 50, y: -60 },
+        { x: xShift, y: yShift+18 },
+        { x: xShift + 50, y: yShift+18 },
       ]
     });
     xShift += 50;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -510,14 +511,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+100, y: -60 },
-        { x: xShift + 150, y: -60 },
+        { x: xShift+100, y: yShift+18 },
+        { x: xShift + 150, y: yShift+18 },
       ]
     });
     xShift += 150;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-86})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-8})` });
     // Draw the ExclusiveGateway shape
     bpmnRenderer.drawShape(groupDef, {
       ...element,
@@ -545,14 +546,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift, y: -60 },
-        { x: xShift + 50, y: -60 },
+        { x: xShift, y: yShift+18 },
+        { x: xShift + 50, y: yShift+18 },
       ]
     });
     xShift += 50;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ServiceTask',
@@ -567,14 +568,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+100, y: -60 },
-        { x: xShift + 136, y: -60 },
+        { x: xShift+100, y: yShift+18 },
+        { x: xShift + 136, y: yShift+18 },
       ]
     });
     xShift += 136;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-78})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       height: 36,
