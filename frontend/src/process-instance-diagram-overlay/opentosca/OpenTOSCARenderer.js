@@ -120,13 +120,14 @@ export default class OpenTOSCARenderer {
       const type = evt.type;
       const element = context.element;
       const parentGfx = context.gfx;
+      const show = context.show;
       console.log("render")
       console.log(element);
       if (element.type === SERVICE_TASK_TYPE) {
         if (type === 'render.shape') {
           let task = bpmnRenderer.drawShape(parentGfx, element);
           this.addSubprocessView(parentGfx, element, bpmnRenderer);
-          this.showDeploymentModel(parentGfx, element);
+          this.showDeploymentModel(parentGfx, element, show);
           return task;
         }
       }
@@ -170,18 +171,23 @@ export default class OpenTOSCARenderer {
 
   addSubprocessView(parentGfx, element, bpmnRenderer) {
     let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
-    let onDemand = element.businessObject.get('opentosca:onDemand');
+    let onDemand = element.businessObject.get('opentosca:onDemandDeployment');
+    console.log(onDemand);
+    console.log(deploymentModelUrl);
     if (!deploymentModelUrl || onDemand !== "true") return;
 
     let groupDef = svgCreate('g');
-
     svgAppend(parentGfx, svgCreate("path", {
-      d: "M -260 -110 L 360 -110 L 360 -10   L 55 -10   L 50 -5  L 45 -10  L -260 -10 Z",
+      d: "M -540 -10 L 890 -10 L 890 200 L 170 160 L 160 165 L 150 200 L -540 160 Z",
       fill: "white",
       stroke: "#777777",
-      "pointer-events": "all"
+      "pointer-events": "all",
+      transform: "translate(-60, -200)"  // Move it up by setting the second parameter to -100
     }));
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${-238}, ${-78})` });
+    
+    let xShift = -590;
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-78})` });
+
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:StartEvent',
@@ -197,19 +203,142 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: -200, y: -60 },
-        { x: -150, y: -60 },
+        { x: xShift + 36, y: -60 },
+        { x: xShift + 86, y: -60 },
       ]
     });
-
+    xShift += 86;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${-150}, ${-100})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
       businessObject: {
-        "name": "Create deployment"
+        "name": "Adapt Model"
+      }
+    });
+    svgAppend(parentGfx, groupDef);
+    xShift += 100;
+
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: xShift, y: -60 },
+        { x: xShift + 50, y: -60 },
+      ]
+    });
+    xShift += 50;
+
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-86})` });
+    // Draw the ExclusiveGateway shape
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ExclusiveGateway',
+      height: 50,
+      width: 50,
+      businessObject: {
+        name: "Dedicated Policy"
+      }
+    });
+
+    // add the correct layout to gateway 
+    svgAppend(groupDef, svgCreate("path", {
+      d: "m 16,15 7.42857142857143,9.714285714285715 -7.42857142857143,9.714285714285715 3.428571428571429,0 5.714285714285715,-7.464228571428572 5.714285714285715,7.464228571428572 3.428571428571429,0 -7.42857142857143,-9.714285714285715 7.42857142857143,-9.714285714285715 -3.428571428571429,0 -5.714285714285715,7.464228571428572 -5.714285714285715,-7.464228571428572 -3.428571428571429,0 z",
+      style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
+    }));
+
+    // Create a new text element
+    var textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+    // Adjust x and y considering the transformation applied to the 'g' element
+    var adjustedX = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[4]);
+    var adjustedY = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
+
+    textElement.setAttribute('x', adjustedY); // Adjust the x-coordinate as needed
+    textElement.setAttribute('y', adjustedY); // Adjust the y-coordinate as needed
+    textElement.setAttribute('font-size', '12');
+    textElement.textContent = 'Dedicated Policy?';
+
+    // Append the text element to the 'g' element
+    groupDef.appendChild(textElement);
+      
+
+    svgAppend(parentGfx, groupDef);
+
+    svgAppend(parentGfx, groupDef);
+    xShift += 50;
+
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {
+        name: "no"
+      },
+      waypoints: [
+        { x: xShift, y: -60 },
+        { x: xShift + 50, y: -60 },
+      ]
+    });
+    xShift += 50;
+
+    // Create a new text element
+    var textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+    // Adjust x and y considering the transformation applied to the 'g' element
+    var adjustedX = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[4]);
+    var adjustedY = 140 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
+
+    textElement.setAttribute('x', adjustedY); // Adjust the x-coordinate as needed
+    textElement.setAttribute('y', 10); // Adjust the y-coordinate as needed
+    textElement.setAttribute('font-size', '12');
+    textElement.textContent = 'no';
+
+    // Append the text element to the 'g' element
+    groupDef.appendChild(textElement);
+      
+
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {
+        name: "yes"
+      },
+      waypoints: [
+        { x: xShift-75, y: -15 },
+        { x: xShift + 100, y: 15 },
+        { x: xShift+250, y: 15 },
+        { x: xShift + 425, y: -15 },
+      ]
+    });
+
+    // Create a new text element
+    var textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+    // Adjust x and y considering the transformation applied to the 'g' element
+    var adjustedX = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[4]);
+    var adjustedY = 140 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
+
+    textElement.setAttribute('x', adjustedY); // Adjust the x-coordinate as needed
+    textElement.setAttribute('y', 10); // Adjust the y-coordinate as needed
+    textElement.setAttribute('font-size', '12');
+    textElement.textContent = 'yes';
+
+    // Append the text element to the 'g' element
+    groupDef.appendChild(textElement);
+      
+
+
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ScriptTask',
+      businessObject: {
+        "name": "Check For Equivalent Deployment Model"
       }
     });
     svgAppend(parentGfx, groupDef);
@@ -219,18 +348,19 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: -50, y: -60 },
-        { x: 0, y: -60 },
+        { x: xShift+100, y: -60 },
+        { x: xShift+150, y: -60 },
       ]
     });
+    xShift += 150;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${0}, ${-100})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
       businessObject: {
-        "name": "Wait for deployment"
+        "name": "Check Container For Available Instance"
       }
     });
     svgAppend(parentGfx, groupDef);
@@ -240,18 +370,194 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: 100, y: -60 },
-        { x: 150, y: -60 },
+        { x: xShift+100, y: -60 },
+        { x: xShift+150, y: -60 },
       ]
     });
+    xShift += 150;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${150}, ${-100})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-86})` });
+    // Draw the ExclusiveGateway shape
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ExclusiveGateway',
+      height: 50,
+      width: 50,
+      businessObject: {
+        name: "Dedicated Policy"
+      }
+    });
+
+    // add the correct layout to gateway 
+    svgAppend(groupDef, svgCreate("path", {
+      d: "m 16,15 7.42857142857143,9.714285714285715 -7.42857142857143,9.714285714285715 3.428571428571429,0 5.714285714285715,-7.464228571428572 5.714285714285715,7.464228571428572 3.428571428571429,0 -7.42857142857143,-9.714285714285715 7.42857142857143,-9.714285714285715 -3.428571428571429,0 -5.714285714285715,7.464228571428572 -5.714285714285715,-7.464228571428572 -3.428571428571429,0 z",
+      style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
+    }));
+
+    var textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+    // Adjust x and y considering the transformation applied to the 'g' element
+    var adjustedX = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[4]);
+    var adjustedY = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
+
+    textElement.setAttribute('x', adjustedY); // Adjust the x-coordinate as needed
+    textElement.setAttribute('y', adjustedY); // Adjust the y-coordinate as needed
+    textElement.setAttribute('font-size', '12');
+    textElement.textContent = 'Instance Available?';
+
+    // Append the text element to the 'g' element
+    groupDef.appendChild(textElement);
+
+    svgAppend(parentGfx, groupDef);
+
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: xShift+50, y: -60 },
+        { x: xShift + 100, y: -60 },
+      ]
+    });
+    xShift += 100;
+    // Create a new text element
+    var textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+    // Adjust x and y considering the transformation applied to the 'g' element
+    var adjustedX = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[4]);
+    var adjustedY = 140 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
+
+    textElement.setAttribute('x', adjustedY); // Adjust the x-coordinate as needed
+    textElement.setAttribute('y', 10); // Adjust the y-coordinate as needed
+    textElement.setAttribute('font-size', '12');
+    textElement.textContent = 'no';
+
+    // Append the text element to the 'g' element
+    groupDef.appendChild(textElement);
+      
+
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-86})` });
+    // Draw the ExclusiveGateway shape
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ExclusiveGateway',
+      height: 50,
+      width: 50,
+      businessObject: {
+        name: "Dedicated Policy"
+      }
+    });
+
+    // add the correct layout to gateway 
+    svgAppend(groupDef, svgCreate("path", {
+      d: "m 16,15 7.42857142857143,9.714285714285715 -7.42857142857143,9.714285714285715 3.428571428571429,0 5.714285714285715,-7.464228571428572 5.714285714285715,7.464228571428572 3.428571428571429,0 -7.42857142857143,-9.714285714285715 7.42857142857143,-9.714285714285715 -3.428571428571429,0 -5.714285714285715,7.464228571428572 -5.714285714285715,-7.464228571428572 -3.428571428571429,0 z",
+      style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
+    }));
+
+  
+
+    svgAppend(parentGfx, groupDef);
+    xShift += 50;
+
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: xShift, y: -60 },
+        { x: xShift + 50, y: -60 },
+      ]
+    });
+    xShift += 50;
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ScriptTask',
+      businessObject: {
+        "name": "Upload to Container"
+      }
+    });
+    svgAppend(parentGfx, groupDef);
+    xShift += 100;
+
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: xShift, y: -60 },
+        { x: xShift + 50, y: -60 },
+      ]
+    });
+    xShift += 50;
+
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ScriptTask',
+      businessObject: {
+        "name": "Deploy Service"
+      }
+    });
+    svgAppend(parentGfx, groupDef);
+
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: xShift+100, y: -60 },
+        { x: xShift + 150, y: -60 },
+      ]
+    });
+    xShift += 150;
+
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-86})` });
+    // Draw the ExclusiveGateway shape
+    bpmnRenderer.drawShape(groupDef, {
+      ...element,
+      type: 'bpmn:ExclusiveGateway',
+      height: 50,
+      width: 50,
+      businessObject: {
+        name: "Dedicated Policy"
+      }
+    });
+
+    // add the correct layout to gateway 
+    svgAppend(groupDef, svgCreate("path", {
+      d: "m 16,15 7.42857142857143,9.714285714285715 -7.42857142857143,9.714285714285715 3.428571428571429,0 5.714285714285715,-7.464228571428572 5.714285714285715,7.464228571428572 3.428571428571429,0 -7.42857142857143,-9.714285714285715 7.42857142857143,-9.714285714285715 -3.428571428571429,0 -5.714285714285715,7.464228571428572 -5.714285714285715,-7.464228571428572 -3.428571428571429,0 z",
+      style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
+    }));
+
+  
+
+    svgAppend(parentGfx, groupDef);
+    xShift += 50;
+
+    bpmnRenderer.drawConnection(parentGfx, {
+      ...element,
+      type: 'bpmn:SequenceFlow',
+      businessObject: {},
+      waypoints: [
+        { x: xShift, y: -60 },
+        { x: xShift + 50, y: -60 },
+      ]
+    });
+    xShift += 50;
+
+    groupDef = svgCreate('g');
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-100})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ServiceTask',
       businessObject: {
-        "name": "Call service"
+        "name": "Invoke Service"
       }
     });
     svgAppend(parentGfx, groupDef);
@@ -261,13 +567,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: 250, y: -60 },
-        { x: 300, y: -60 },
+        { x: xShift+100, y: -60 },
+        { x: xShift + 136, y: -60 },
       ]
     });
+    xShift += 136;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${301}, ${-78})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${-78})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       height: 36,
@@ -280,16 +587,20 @@ export default class OpenTOSCARenderer {
   }
 
   showOrDeleteDeploymentModel(parentGfx, element) {
+    console.log("showordelete")
+    console.log(element)
+    console.log(element.showDeploymentModel)
     if (element.showDeploymentModel) {
       this.showDeploymentModel(parentGfx, element);
     } else {
+      console.log("remove deploymentmodel")
       this.removeDeploymentModel(parentGfx, element);
     }
   }
 
-  async showDeploymentModel(parentGfx, element) {
+  async showDeploymentModel(parentGfx, element, show) {
     let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
-    if (!deploymentModelUrl) return;
+    if (!deploymentModelUrl || deploymentModelUrl.includes('wineryEndpoint')) return;
     const button = drawTaskSVG(parentGfx, {
       transform: 'matrix(0.3, 0, 0, 0.3, 85, 65)',
       svg: buttonIcon
@@ -298,8 +609,11 @@ export default class OpenTOSCARenderer {
     button.style['cursor'] = 'pointer';
     button.addEventListener('click', (e) => {
       e.preventDefault();
+      console.log("click")
       element.deploymentModelTopology = undefined;
+      console.log(show)
       element.showDeploymentModel = !element.showDeploymentModel;
+      console.log(element)
       this.showOrDeleteDeploymentModel(parentGfx, element);
     });
 
@@ -606,9 +920,14 @@ export default class OpenTOSCARenderer {
   }
 
   removeDeploymentModel(parentGfx, element) {
+    console.log("remove")
+    console.log(this.currentlyShownDeploymentsModels)
+    console.log(element.id)
     this.currentlyShownDeploymentsModels.delete(element.id);
     const group = svgSelect(parentGfx, "#" + DEPLOYMENT_GROUP_ID);
+    console.log(group)
     if (group) {
+      console.log("remove group")
       group.remove();
     }
   }

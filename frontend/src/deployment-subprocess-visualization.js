@@ -20,12 +20,13 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
     let showTasks = false;
     const drilldownOverlayBehavior = viewer.get("drilldownOverlayBehavior");
     new OpenTOSCARenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
+    let eventBus = viewer.get("eventBus");
 
     const update = (showSubProcesses) => {
         const subProcesses = [];
         const tasks = [];
         const findSubprocesses = (element) => {
-            console.log(element);
+            
             if (element.businessObject.get('opentosca:deploymentModelUrl')) {
                 subProcesses.push(element);
             }
@@ -38,21 +39,34 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
         canvas.getRootElement().children.forEach(findSubprocesses)
         for (const subProcess of subProcesses) {
             const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask";
+            console.log(showSubProcesses)
+            let elementRegistry = viewer.get("elementRegistry");
+            let context = {};
+            context.element = subProcess;
+            context.gfx = elementRegistry.getGraphics(subProcess);
+            context.show = showSubProcesses;
+            console.log("fire");
+            console.log(showSubProcesses);
+            eventBus.fire("render.shape", context)
 
             // only change shape if it is a valid deployment model and onDemand
-            if (subProcess.type !== newType && !subProcess.businessObject.get('opentosca:deploymentModelUrl').includes("wineryEndpoint")) {
-
+            if (subProcess.type !== newType //&& !subProcess.businessObject.get('opentosca:deploymentModelUrl').includes("wineryEndpoint")
+            ) {
+                //eventBus.fire("render.shape", context)
                 // trigger the render shape event
-                if (subProcess.businessObject.get('opentosca:onDemand') === "true") {
+                if (subProcess.businessObject.get('opentosca:onDemandDeployment') === "true") {
                     canvas.removeShape(subProcess);
                     subProcess.type = newType;
                     canvas.addShape(subProcess);
                 } else {
-                    if (showSubProcesses) {
+                    //if (showSubProcesses) {
                         console.log("removeShape");
-                        canvas.removeShape(subProcess);
-                        canvas.addShape(subProcess);
-                    }
+                        
+                       
+                        //eventBus.fire("render.shape", context)
+                        //canvas.removeShape(subProcess);
+                        //canvas.addShape(subProcess);
+                    //}
                 }
 
                 if (showSubProcesses) {
@@ -64,6 +78,7 @@ export function addSubprocessToggleButton(viewer, options, { control }) {
     update(showSubProcesses);
     actionButtonElement.addEventListener("click", () => {
         showSubProcesses = !showSubProcesses;
+        console.log(showSubProcesses)
         showTasks = !showTasks;
         update(showSubProcesses);
     })
