@@ -178,7 +178,7 @@ export default class OpenTOSCARenderer {
 
     let groupDef = svgCreate('g');
     svgAppend(parentGfx, svgCreate("path", {
-      d: "M -590 -110 L 380 -110 L 380 190 L -145 190 L -150 195 L -155 190 L -590 190 Z",
+      d: "M -590 -110 L 380 -110 L 380 210 L -145 210 L -150 195 L -155 210 L -590 210 Z",
       fill: "white",
       stroke: "#777777",
       "pointer-events": "all",
@@ -257,7 +257,7 @@ export default class OpenTOSCARenderer {
 
     // Adjust x and y considering the transformation applied to the 'g' element
     var adjustedX = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[4]);
-    var adjustedY = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
+    var adjustedY = 80 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
 
     textElement.setAttribute('x', adjustedY); // Adjust the x-coordinate as needed
     textElement.setAttribute('y', adjustedY); // Adjust the y-coordinate as needed
@@ -291,7 +291,7 @@ export default class OpenTOSCARenderer {
 
     // Adjust x and y considering the transformation applied to the 'g' element
     var adjustedX = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[4]);
-    var adjustedY = 140 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
+    var adjustedY = 210 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
 
     textElement.setAttribute('x', adjustedY); // Adjust the x-coordinate as needed
     textElement.setAttribute('y', 10); // Adjust the y-coordinate as needed
@@ -321,7 +321,7 @@ export default class OpenTOSCARenderer {
 
     // Adjust x and y considering the transformation applied to the 'g' element
     var adjustedX = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[4]);
-    var adjustedY = 140 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
+    var adjustedY = 210 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
 
     textElement.setAttribute('x', adjustedY); // Adjust the x-coordinate as needed
     textElement.setAttribute('y', 10); // Adjust the y-coordinate as needed
@@ -427,7 +427,7 @@ export default class OpenTOSCARenderer {
 
     // Adjust x and y considering the transformation applied to the 'g' element
     var adjustedX = 50 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[4]);
-    var adjustedY = 140 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
+    var adjustedY = 210 + parseFloat(groupDef.getAttribute('transform').split('(')[1].split(',')[5]);
 
     textElement.setAttribute('x', adjustedY); // Adjust the x-coordinate as needed
     textElement.setAttribute('y', 10); // Adjust the y-coordinate as needed
