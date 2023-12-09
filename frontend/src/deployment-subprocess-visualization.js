@@ -56,7 +56,7 @@ export async function addSubprocessToggleButton(viewer, options, { control }) {
             }
             let completeModelUrl = "completeModelUrl_" + child.id;
             if (variables.hasOwnProperty(completeModelUrl)) {
-                let value = variables[completeModelUrl].value;
+                let value = variables[completeModelUrl].value + '?csar';
                 child.businessObject.$attrs["opentosca:deploymentModelUrl"]  = value;
             }
         }
