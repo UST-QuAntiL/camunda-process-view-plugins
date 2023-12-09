@@ -213,10 +213,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                         const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
                         return `<strong>${variableName}</strong>: ${formattedValue}`
                     } else {
-                        console.log()
-                        if (variableValue !== null) {
-                            fileVariables.push(variableName);
-                        }
+                        fileVariables.push(variableName);
                     }
                 }
             }
@@ -229,8 +226,10 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             console.log("----fileVariable")
             let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
             let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
+            if(value !== ""){
             console.log(value);
             variableText = variableText + '<strong>' + (`${fileVariable}</strong>:<br> <img class="quantum-view-picture" src="${value}" style="max-width: 100%;height: auto;"/>`)
+            }
         }
 
         let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
@@ -284,7 +283,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
             <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px"><p>${variableText}</p></div>
             </div>`;
-        if (variableText !== '<br><br>' && variableText !== '') {
+        if (variableText !== '<br><br>' && variableText !== '' && variableText !== '<br>') {
             diagramElement.html = html;
         }
         if (attributes["quantme:quantmeTaskType"] !== undefined) {

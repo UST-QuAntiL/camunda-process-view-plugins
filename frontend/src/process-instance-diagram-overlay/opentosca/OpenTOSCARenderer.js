@@ -25,7 +25,6 @@ import {
   innerSVG
 } from 'tiny-svg';
 import { query as domQuery } from 'min-dom';
-import { getQuantMESVG } from "./QuantMESVGMap";
 
 const HIGH_PRIORITY = 14001;
 const SERVICE_TASK_TYPE = 'bpmn:ServiceTask';
