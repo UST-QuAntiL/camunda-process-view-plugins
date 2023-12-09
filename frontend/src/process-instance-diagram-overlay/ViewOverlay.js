@@ -219,7 +219,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             }
         }).join('<br>');
 
-        let overlaySize = variablesToDisplay.length * 80;
+        let overlaySize = variablesToDisplay.length * 120;
         let positionTop = overlayTop - (overlaySize / 2) - 70;
         let leftPosition = diagramElement.x - 50;
         for (let fileVariable of fileVariables) {
