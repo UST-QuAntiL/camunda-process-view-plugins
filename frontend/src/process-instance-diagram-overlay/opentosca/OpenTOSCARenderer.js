@@ -60,21 +60,27 @@ async function getVMQProvData(qProvEndpoint) {
     const data = await response.json();
 
     // Extract the list of hardware characteristics
-    const hardwareCharacteristics = data._embedded.hardwareCharacteristicsDtoes;
+    if (data !== null) {
+      if (data._embedded !== undefined) {
+        const hardwareCharacteristics = data._embedded.hardwareCharacteristicsDtoes;
 
-    // Sort the array based on the recordingTime in descending order
-    const sortedData = hardwareCharacteristics.sort((a, b) => new Date(b.recordingTime) - new Date(a.recordingTime));
+        // Sort the array based on the recordingTime in descending order
+        const sortedData = hardwareCharacteristics.sort((a, b) => new Date(b.recordingTime) - new Date(a.recordingTime));
 
-    // Get the data with the latest timestamp
-    const latestData = sortedData[0];
+        // Get the data with the latest timestamp
+        const latestData = sortedData[0];
 
-    // Log the result
-    console.log(latestData);
+        // Log the result
+        console.log(latestData);
 
-    if (latestData) {
-      return latestData;
+        if (latestData) {
+          return latestData;
+        } else {
+          console.log(`No data collected.`);
+          return null;
+        }
+      }
     } else {
-      console.log(`No data collected.`);
       return null;
     }
   } catch (error) {
@@ -1070,83 +1076,91 @@ export default class OpenTOSCARenderer {
     });
 
     if (nodeTemplate.type.includes("Ubuntu-VM_20.04")) {
-      let qprovData = await getVMQProvData(element.businessObject.get("qProvUrl"));
-      const groupDef3 = svgCreate("g", { id: element.id + "ubuntu_group" });
-      const HORIZONTAL_SPACING = 50; // Adjust as needed
-      const VERTICAL_SPACING = 10; // Adjust as needed
-      svgAttr(groupDef3, {
-        transform: `matrix(1, 0, 0, 1, ${(position.x + NODE_WIDTH + HORIZONTAL_SPACING).toFixed(2)}, ${position.y.toFixed(2)})`,
-      });
 
-      const rect = svgCreate("rect", {
-        width: 300,
-        height: 170,
-        fill: "white",
-        stroke: "black",
-        id: element.id + "_rect"
-      });
-
-      svgAppend(groupDef3, rect);
-
-      let textY = 0;
-      let maxWidth = 300;
-      let height = (NODE_HEIGHT / 2) + VERTICAL_SPACING;
-      let i = 0;
-      for (const [variable, value] of Object.entries(qprovData)) {
-        const textContent = `${variable}: ${value}`;
-
-        const text = this.textRenderer.createText(textContent, {
-          box: {
-            width: maxWidth,
-            height: height
-          },
-          align: "left-top",
-          style: {
-            fill: "black",
-          },
-        });
-
-        text.id = element.id + "_task" + i
-        i++;
-        height = height + VERTICAL_SPACING;
-
-        const textWidth = text.getBBox().width;
-        if (textWidth > maxWidth) {
-          maxWidth = textWidth;
-        }
-        svgAppend(groupDef3, text);
-        textY += text.getBBox().height + VERTICAL_SPACING;
-      }
-
-      const totalHeight = textY > NODE_HEIGHT ? textY : NODE_HEIGHT;
-      svgAttr(rect, { height: totalHeight });
 
       //parentGfx.append(groupDef3);
       groupDef.addEventListener('mouseenter', async () => {
+        let qprovData = await getVMQProvData(element.businessObject.get("qProvUrl"));
+        const groupDef3 = svgCreate("g", { id: element.id + "ubuntu_group" });
+        const HORIZONTAL_SPACING = 50; // Adjust as needed
+        const VERTICAL_SPACING = 10; // Adjust as needed
+        svgAttr(groupDef3, {
+          transform: `matrix(1, 0, 0, 1, ${(position.x + NODE_WIDTH + HORIZONTAL_SPACING).toFixed(2)}, ${position.y.toFixed(2)})`,
+        });
+
+        const rect = svgCreate("rect", {
+          width: 300,
+          height: 170,
+          fill: "white",
+          stroke: "black",
+          id: element.id + "_rect"
+        });
+
+        svgAppend(groupDef3, rect);
+
+        let textY = 0;
+        let maxWidth = 300;
+        let height = (NODE_HEIGHT / 2) + VERTICAL_SPACING;
+        let i = 0;
+        for (const [variable, value] of Object.entries(qprovData)) {
+          const textContent = `${variable}: ${value}`;
+
+          const text = this.textRenderer.createText(textContent, {
+            box: {
+              width: maxWidth,
+              height: height
+            },
+            align: "left-top",
+            style: {
+              fill: "black",
+            },
+          });
+
+          text.id = element.id + "_task" + i;
+          i++;
+          height = height + VERTICAL_SPACING;
+
+          const textWidth = text.getBBox().width;
+          if (textWidth > maxWidth) {
+            maxWidth = textWidth;
+          }
+          svgAppend(groupDef3, text);
+          textY += text.getBBox().height + VERTICAL_SPACING;
+        }
+
+        const totalHeight = textY > NODE_HEIGHT ? textY : NODE_HEIGHT;
+        svgAttr(rect, { height: totalHeight });
+        i = 0;
+        let verticalOffset = 0;
         parentGfx.append(groupDef3);
+        for (const [variable, value] of Object.entries(qprovData)) {
+          console.log(text);
+          let textfieldId = element.id + '_task' + i;
+          if (document.getElementById(textfieldId) !== null) {
+            const initialTextElement = document.getElementById(textfieldId).children[0];
+
+            verticalOffset += 10;
+
+            initialTextElement.setAttribute('y', verticalOffset);
+            initialTextElement.setAttribute('x', 10);
+          }
+          i++;
+        }
+
       });
       groupDef.addEventListener('mouseleave', async () => {
         const groupDef3 = document.getElementById(element.id + "ubuntu_group");
         if (groupDef3) {
+
+          // Get the parent node of the element
+          const parentElement = groupDef3.parentNode;
+
+          // Remove the element from its parent
+          parentElement.removeChild(groupDef3);
+
           groupDef3.remove();
         }
       });
-
-      i = 0;
-      let verticalOffset = 0;
-      for (const [variable, value] of Object.entries(qprovData)) {
-        console.log(text);
-        if(document.getElementById(element.id + '_task' + i) !== null){
-        const initialTextElement = document.getElementById(element.id + '_task' + i).children[0];
-
-        verticalOffset += 10;
-
-        initialTextElement.setAttribute('y', verticalOffset);
-        initialTextElement.setAttribute('x', 10);
-        }
-        i++;
-        
-      }
 
     }
 
