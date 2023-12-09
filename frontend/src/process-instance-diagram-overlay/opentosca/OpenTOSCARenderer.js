@@ -970,6 +970,9 @@ export default class OpenTOSCARenderer {
         style: {
           fontSize: 10,
         },
+        style: {
+          fill: "black",
+        },
       });
       svgAppend(labelGroup, text);
       parentGfx.prepend(labelGroup);
@@ -1031,6 +1034,9 @@ export default class OpenTOSCARenderer {
         height: NODE_HEIGHT / 2,
       },
       align: "center-middle",
+      style: {
+        fill: "black",
+      },
     });
 
     svgAppend(groupDef, text);
@@ -1095,9 +1101,11 @@ export default class OpenTOSCARenderer {
             height: height
           },
           align: "left-top",
+          style: {
+            fill: "black",
+          },
         });
 
-        console.log(text);
         text.id = element.id + "_task" + i
         i++;
         height = height + VERTICAL_SPACING;
@@ -1173,6 +1181,9 @@ export default class OpenTOSCARenderer {
           height: NODE_HEIGHT / 2,
         },
         align: "center-middle",
+        style: {
+          fill: "black",
+        },
       });
 
       svgAppend(groupDef, text);
