@@ -160,7 +160,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         let variablesToDisplay = [];
         console.log(elementArray);
         let type = diagramElement.businessObject.$attrs["quantme:quantmeTaskType"];
-        if(type === "quantme:ParameterOptimizationTask") {
+        if (type === "quantme:ParameterOptimizationTask") {
             variablesToDisplay.push("optimizedParameters");
             variablesToDisplay.push("optimizationLandscape");
         }
@@ -209,11 +209,14 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                     console.log(variableValue)
                     const variableType = variable.type;
                     console.log(variableType);
-                    if (variableType !== "File") {
+                    if (variableType !== "File" && variableValue !== null) {
                         const formattedValue = typeof variableValue === 'object' ? JSON.stringify(variableValue) : variableValue;
                         return `<strong>${variableName}</strong>: ${formattedValue}`
                     } else {
-                        fileVariables.push(variableName);
+                        console.log()
+                        if (variableValue !== null) {
+                            fileVariables.push(variableName);
+                        }
                     }
                 }
             }
@@ -234,7 +237,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         console.log("the response from QProv");
         console.log(providerId);
         let attributes = diagramElement.businessObject.$attrs;
-        
+
         let qProvText = '';
         if (selectedQpu !== '') {
 
@@ -276,26 +279,26 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                     }
                 }
             }
-        } 
+        }
 
-            const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
+        const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
             <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px"><p>${variableText}</p></div>
             </div>`;
-            if (variableText !== '<br><br>' && variableText !== '') {
-                diagramElement.html = html;
-            }
-            if (attributes["quantme:quantmeTaskType"] !== undefined) {
-                if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumCircuitExecutionTask" && selectedQpu !== '') {
-                    overlaySize = 10 * 20;
-                    positionTop = overlayTop - (overlaySize / 2) - 10;
-                    let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
+        if (variableText !== '<br><br>' && variableText !== '') {
+            diagramElement.html = html;
+        }
+        if (attributes["quantme:quantmeTaskType"] !== undefined) {
+            if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumCircuitExecutionTask" && selectedQpu !== '') {
+                overlaySize = 10 * 20;
+                positionTop = overlayTop - (overlaySize / 2) - 10;
+                let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
                     <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px">${qProvText}</p></div>
                 </div>`;
-                    diagramElement.html = exehtml;
-                }
+                diagramElement.html = exehtml;
             }
         }
-    
+    }
+
 }
 
 
@@ -319,7 +322,7 @@ function registerOverlay(diagramElements) {
 
             if (visualElements !== null && attrs["quantme:quantmeTaskType"] !== undefined) {
                 console.log(visualElements);
-                
+
                 const addedHtml = diagramElement.html;
                 console.log(addedHtml);
                 var tempElement = document.createElement('div');

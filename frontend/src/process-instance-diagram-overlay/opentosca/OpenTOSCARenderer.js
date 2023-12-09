@@ -45,6 +45,37 @@ const STROKE_STYLE = {
   strokeDasharray: 4,
 };
 
+async function getVMQProvData(qProvEndpoint) {
+  const apiEndpoint = `${qProvEndpoint}/characteristics`; // Updated variable name
+  console.log(apiEndpoint);
+  try {
+    const response = await fetch(apiEndpoint);
+    const data = await response.json();
+
+    // Extract the list of hardware characteristics
+    const hardwareCharacteristics = data._embedded.hardwareCharacteristicsDtoes;
+
+    // Sort the array based on the recordingTime in descending order
+    const sortedData = hardwareCharacteristics.sort((a, b) => new Date(b.recordingTime) - new Date(a.recordingTime));
+
+    // Get the data with the latest timestamp
+    const latestData = sortedData[0];
+
+    // Log the result
+    console.log(latestData);
+
+    if (latestData) {
+      return latestData;
+    } else {
+      console.log(`No data collected.`);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    return null;
+  }
+}
+
 async function loadTopology(deploymentModelUrl) {
   let topology;
   let tags;
@@ -126,7 +157,7 @@ export default class OpenTOSCARenderer {
       if (element.type === SERVICE_TASK_TYPE) {
         if (type === 'render.shape') {
           let task = bpmnRenderer.drawShape(parentGfx, element);
-          this.addSubprocessView(parentGfx, element, bpmnRenderer);
+          //this.addSubprocessView(parentGfx, element, bpmnRenderer);
           this.showDeploymentModel(parentGfx, element, show);
           return task;
         }
@@ -184,7 +215,7 @@ export default class OpenTOSCARenderer {
       "pointer-events": "all",
       transform: "translate(270, -147) scale(1.5, 0.7)"
     }));
-    
+
     let xShift = -590;
     let yShift = -147;
     svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift})` });
@@ -204,14 +235,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift + 36, y: yShift+18 },
-        { x: xShift + 86, y: yShift+18 },
+        { x: xShift + 36, y: yShift + 18 },
+        { x: xShift + 86, y: yShift + 18 },
       ]
     });
     xShift += 86;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -227,14 +258,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift, y: yShift+18 },
-        { x: xShift + 50, y: yShift+18 },
+        { x: xShift, y: yShift + 18 },
+        { x: xShift + 50, y: yShift + 18 },
       ]
     });
     xShift += 50;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-8})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 8})` });
     // Draw the ExclusiveGateway shape
     bpmnRenderer.drawShape(groupDef, {
       ...element,
@@ -266,7 +297,7 @@ export default class OpenTOSCARenderer {
 
     // Append the text element to the 'g' element
     groupDef.appendChild(textElement);
-      
+
 
     svgAppend(parentGfx, groupDef);
 
@@ -280,8 +311,8 @@ export default class OpenTOSCARenderer {
         name: "no"
       },
       waypoints: [
-        { x: xShift, y: yShift+18 },
-        { x: xShift + 50, y: yShift+18 },
+        { x: xShift, y: yShift + 18 },
+        { x: xShift + 50, y: yShift + 18 },
       ]
     });
     xShift += 50;
@@ -300,7 +331,7 @@ export default class OpenTOSCARenderer {
 
     // Append the text element to the 'g' element
     groupDef.appendChild(textElement);
-      
+
 
     bpmnRenderer.drawConnection(parentGfx, {
       ...element,
@@ -309,10 +340,12 @@ export default class OpenTOSCARenderer {
         name: "yes"
       },
       waypoints: [
-        { x: xShift-75, y: -25 },
+        { x: xShift - 75, y: yShift + 50 },
         { x: xShift + 100, y: -25 },
-        { x: xShift+250, y: -25 },
-        { x: xShift + 425, y: -25 },
+        { x: xShift + 125, y: -25 },
+        { x: xShift + 150, y: -25 },
+        { x: xShift + 250, y: -25 },
+        { x: xShift + 425, y: yShift + 50 },
       ]
     });
 
@@ -330,11 +363,11 @@ export default class OpenTOSCARenderer {
 
     // Append the text element to the 'g' element
     groupDef.appendChild(textElement);
-      
+
 
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -349,14 +382,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+100, y: yShift+18 },
-        { x: xShift+150, y: yShift+18 },
+        { x: xShift + 100, y: yShift + 18 },
+        { x: xShift + 150, y: yShift + 18 },
       ]
     });
     xShift += 150;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -371,14 +404,15 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+100, y: yShift+18 },
-        { x: xShift+150, y: yShift+18 },
+        { x: xShift + 100, y: yShift + 18 },
+        { x: xShift + 150, y: yShift + 18 },
       ]
     });
+
     xShift += 150;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-8})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 8})` });
     // Draw the ExclusiveGateway shape
     bpmnRenderer.drawShape(groupDef, {
       ...element,
@@ -417,8 +451,8 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+50, y: yShift+18 },
-        { x: xShift + 100, y: yShift+18 },
+        { x: xShift + 50, y: yShift + 18 },
+        { x: xShift + 100, y: yShift + 18 },
       ]
     });
     xShift += 100;
@@ -436,10 +470,10 @@ export default class OpenTOSCARenderer {
 
     // Append the text element to the 'g' element
     groupDef.appendChild(textElement);
-      
+
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-8})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 8})` });
     // Draw the ExclusiveGateway shape
     bpmnRenderer.drawShape(groupDef, {
       ...element,
@@ -457,7 +491,7 @@ export default class OpenTOSCARenderer {
       style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
     }));
 
-  
+
 
     svgAppend(parentGfx, groupDef);
     xShift += 50;
@@ -467,13 +501,13 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift, y: yShift+18 },
-        { x: xShift + 50, y: yShift+18 },
+        { x: xShift, y: yShift + 18 },
+        { x: xShift + 50, y: yShift + 18 },
       ]
     });
     xShift += 50;
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -489,14 +523,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift, y: yShift+18 },
-        { x: xShift + 50, y: yShift+18 },
+        { x: xShift, y: yShift + 18 },
+        { x: xShift + 50, y: yShift + 18 },
       ]
     });
     xShift += 50;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ScriptTask',
@@ -511,14 +545,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+100, y: yShift+18 },
-        { x: xShift + 150, y: yShift+18 },
+        { x: xShift + 100, y: yShift + 18 },
+        { x: xShift + 150, y: yShift + 18 },
       ]
     });
     xShift += 150;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-8})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 8})` });
     // Draw the ExclusiveGateway shape
     bpmnRenderer.drawShape(groupDef, {
       ...element,
@@ -536,7 +570,7 @@ export default class OpenTOSCARenderer {
       style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
     }));
 
-  
+
 
     svgAppend(parentGfx, groupDef);
     xShift += 50;
@@ -546,14 +580,14 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift, y: yShift+18 },
-        { x: xShift + 50, y: yShift+18 },
+        { x: xShift, y: yShift + 18 },
+        { x: xShift + 50, y: yShift + 18 },
       ]
     });
     xShift += 50;
 
     groupDef = svgCreate('g');
-    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift-22})` });
+    svgAttr(groupDef, { transform: `matrix(1, 0, 0, 1, ${xShift}, ${yShift - 22})` });
     bpmnRenderer.drawShape(groupDef, {
       ...element,
       type: 'bpmn:ServiceTask',
@@ -568,8 +602,8 @@ export default class OpenTOSCARenderer {
       type: 'bpmn:SequenceFlow',
       businessObject: {},
       waypoints: [
-        { x: xShift+100, y: yShift+18 },
-        { x: xShift + 136, y: yShift+18 },
+        { x: xShift + 100, y: yShift + 18 },
+        { x: xShift + 136, y: yShift + 18 },
       ]
     });
     xShift += 136;
@@ -601,6 +635,7 @@ export default class OpenTOSCARenderer {
 
   async showDeploymentModel(parentGfx, element, show) {
     let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
+    let qprovEndpoint = element.businessObject.get("qProvUrl");
     if (!deploymentModelUrl || deploymentModelUrl.includes('wineryEndpoint')) return;
     const button = drawTaskSVG(parentGfx, {
       transform: 'matrix(0.3, 0, 0, 0.3, 85, 65)',
@@ -624,6 +659,7 @@ export default class OpenTOSCARenderer {
     const { topNode, nodeTemplates, relationshipTemplates } =
       await loadTopology(deploymentModelUrl);
 
+
     let ySubtract = parseInt(topNode.y);
     let xSubtract = parseInt(topNode.x);
     let xMin = 0;
@@ -633,6 +669,10 @@ export default class OpenTOSCARenderer {
 
     const positions = new Map();
     for (let nodeTemplate of nodeTemplates) {
+      console.log("NODETEMPLATE")
+      console.log(nodeTemplate)
+
+
       const position = {
         x: (parseInt(nodeTemplate.x) - xSubtract) / 1.4,
         y: (parseInt(nodeTemplate.y) - ySubtract) / 1.4,
@@ -649,7 +689,17 @@ export default class OpenTOSCARenderer {
       }
       positions.set(nodeTemplate.id, position);
       if (nodeTemplate.id !== topNode.id) {
-        this.drawNodeTemplate(groupDef, nodeTemplate, position);
+        this.drawNodeTemplate(groupDef, nodeTemplate, position, element);
+        const namePattern = /\}(.*)/g;
+        const typeMatches = namePattern.exec(nodeTemplate.type);
+        let typeName;
+        if (typeMatches === null || typeMatches.length === 0) {
+          typeName = nodeTemplate.type;
+        } else {
+          typeName = typeMatches[1];
+        }
+        console.log(typeName)
+
       }
 
     }
@@ -933,7 +983,7 @@ export default class OpenTOSCARenderer {
     }
   }
 
-  drawNodeTemplate(parentGfx, nodeTemplate, position) {
+  drawNodeTemplate(parentGfx, nodeTemplate, position, element) {
     const groupDef = svgCreate("g");
     svgAttr(groupDef, {
       transform: `matrix(1, 0, 0, 1, ${position.x.toFixed(
@@ -987,9 +1037,69 @@ export default class OpenTOSCARenderer {
       },
     });
 
+    if (nodeTemplate.type.includes("Ubuntu-VM_20.04")) {
+      const groupDef3 = svgCreate("g");
+      // Add a rectangle with the content "test: testValue" to the right side of the main rectangle
+      const additionalRect = svgCreate("rect", {
+        x: NODE_WIDTH + 5, // Adjust the distance from the main rectangle
+        y: 0,
+        width: 100, // Adjust the width as needed
+        height: NODE_HEIGHT,
+        fill: "#CCCCCC", // Adjust the color as needed
+      });
+      
+  
+      // Add text content to the additional rectangle
+      const additionalText = this.textRenderer.createText("test: testValue", {
+        box: {
+          width: 100, // Match the width of the additional rectangle
+          height: NODE_HEIGHT,
+        },
+        align: "center-middle",
+        style: {
+          fill: "#000000", // Adjust the text color as needed
+        },
+      });
+      svgAppend(additionalRect, additionalText); // Append to additionalRect, not groupDef
+      svgAppend(groupDef3, additionalRect);
+      parentGfx.append(groupDef3);
+    }
+
     svgAppend(groupDef2, typeText);
     parentGfx.append(groupDef);
     parentGfx.append(groupDef2);
+    
+  }
+
+  drawVMData(parentGfx, data, position) {
+    const groupDef = svgCreate("g");
+    svgAttr(groupDef, {
+      transform: `matrix(1, 0, 0, 1, ${position.x.toFixed(
+        2
+      )}, ${position.y.toFixed(2)})`,
+    });
+    const rect = svgCreate("rect", {
+      width: NODE_WIDTH,
+      height: NODE_HEIGHT,
+      fill: "#DDDDDD",
+      ...STROKE_STYLE,
+    });
+
+    svgAppend(groupDef, rect);
+
+    for (const [variable, value] of Object.entries(data)) {
+      const text = this.textRenderer.createText(`${variable}: ${value}`, {
+        box: {
+          width: NODE_WIDTH,
+          height: NODE_HEIGHT / 2,
+        },
+        align: "center-middle",
+      });
+
+      svgAppend(groupDef, text);
+    }
+
+    parentGfx.append(groupDef);
   }
 
   renderer(type) {
