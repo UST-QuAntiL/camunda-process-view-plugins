@@ -44,6 +44,14 @@ const STROKE_STYLE = {
   strokeDasharray: 4,
 };
 
+const STROKE_STYLEOVERLAY = {
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+  stroke: '#777777',
+  strokeWidth: 2,
+  strokeDasharray: 4,
+};
+
 async function getVMQProvData(qProvEndpoint) {
   const apiEndpoint = `${qProvEndpoint}/characteristics`; // Updated variable name
   console.log(apiEndpoint);
@@ -977,12 +985,31 @@ export default class OpenTOSCARenderer {
     const group = svgSelect(parentGfx, "#" + DEPLOYMENT_GROUP_ID);
     console.log(group)
     if (group) {
-      console.log("remove group")
-      group.remove();
+      let visualElements = document.querySelector(`g.djs-element[data-element-id="${element.id}"]`);
+      if (visualElements && visualElements.children.length > 0) {
+        let firstChild = visualElements.children[0];
+        let childrenOfFirstChild = firstChild.children;
+        let childrenOfFirstChildArray = Array.from(childrenOfFirstChild);
+        //childrenOfFirstChild.parentNode.removeChild(element);
+        console.log(childrenOfFirstChildArray);
+        for (let i = 0; i < childrenOfFirstChild.length; i++) {
+          let child = childrenOfFirstChild[i];
+          if (child.id === "deployment") {
+            // Remove the child
+            child.parentNode.removeChild(child);
+            i--;
+          }
+        }
+        console.log("remove group")
+        group.remove();
+      } else {
+        console.error("No visual elements found or the first element has no children.");
+      }
+
     }
   }
 
-  drawNodeTemplate(parentGfx, nodeTemplate, position, element) {
+  async drawNodeTemplate(parentGfx, nodeTemplate, position, element) {
     const groupDef = svgCreate("g");
     svgAttr(groupDef, {
       transform: `matrix(1, 0, 0, 1, ${position.x.toFixed(
@@ -1037,37 +1064,90 @@ export default class OpenTOSCARenderer {
     });
 
     if (nodeTemplate.type.includes("Ubuntu-VM_20.04")) {
-      const groupDef3 = svgCreate("g");
-      // Add a rectangle with the content "test: testValue" to the right side of the main rectangle
-      const additionalRect = svgCreate("rect", {
-        x: NODE_WIDTH + 5, // Adjust the distance from the main rectangle
-        y: 0,
-        width: 100, // Adjust the width as needed
-        height: NODE_HEIGHT,
-        fill: "#CCCCCC", // Adjust the color as needed
+      let qprovData = await getVMQProvData(element.businessObject.get("qProvUrl"));
+      const groupDef3 = svgCreate("g", { id: element.id + "ubuntu_group" });
+      const HORIZONTAL_SPACING = 50; // Adjust as needed
+      const VERTICAL_SPACING = 10; // Adjust as needed
+      svgAttr(groupDef3, {
+        transform: `matrix(1, 0, 0, 1, ${(position.x + NODE_WIDTH + HORIZONTAL_SPACING).toFixed(2)}, ${position.y.toFixed(2)})`,
       });
-      
-  
-      // Add text content to the additional rectangle
-      const additionalText = this.textRenderer.createText("test: testValue", {
-        box: {
-          width: 100, // Match the width of the additional rectangle
-          height: NODE_HEIGHT,
-        },
-        align: "center-middle",
-        style: {
-          fill: "#000000", // Adjust the text color as needed
-        },
+
+      const rect = svgCreate("rect", {
+        width: 300,
+        height: 170,
+        fill: "white",
+        stroke: "black",
+        id: element.id + "_rect"
       });
-      svgAppend(additionalRect, additionalText); // Append to additionalRect, not groupDef
-      svgAppend(groupDef3, additionalRect);
-      parentGfx.append(groupDef3);
+
+      svgAppend(groupDef3, rect);
+
+      let textY = 0;
+      let maxWidth = 300;
+      let height = (NODE_HEIGHT / 2) + VERTICAL_SPACING;
+      let i = 0;
+      for (const [variable, value] of Object.entries(qprovData)) {
+        const textContent = `${variable}: ${value}`;
+
+        const text = this.textRenderer.createText(textContent, {
+          box: {
+            width: maxWidth,
+            height: height
+          },
+          align: "left-top",
+        });
+
+        console.log(text);
+        text.id = element.id + "_task" + i
+        i++;
+        height = height + VERTICAL_SPACING;
+
+        const textWidth = text.getBBox().width;
+        if (textWidth > maxWidth) {
+          maxWidth = textWidth;
+        }
+        svgAppend(groupDef3, text);
+        textY += text.getBBox().height + VERTICAL_SPACING;
+      }
+
+      const totalHeight = textY > NODE_HEIGHT ? textY : NODE_HEIGHT;
+      svgAttr(rect, { height: totalHeight });
+
+      //parentGfx.append(groupDef3);
+      groupDef.addEventListener('mouseenter', async () => {
+        parentGfx.append(groupDef3);
+      });
+      groupDef.addEventListener('mouseleave', async () => {
+        const groupDef3 = document.getElementById(element.id + "ubuntu_group");
+        if (groupDef3) {
+          groupDef3.remove();
+        }
+      });
+
+      i = 0;
+      let verticalOffset = 0;
+      for (const [variable, value] of Object.entries(qprovData)) {
+        console.log(text);
+        if(document.getElementById(element.id + '_task' + i) !== null){
+        const initialTextElement = document.getElementById(element.id + '_task' + i).children[0];
+
+        verticalOffset += 10;
+
+        initialTextElement.setAttribute('y', verticalOffset);
+        initialTextElement.setAttribute('x', 10);
+        }
+        i++;
+        
+      }
+
     }
+
+
 
     svgAppend(groupDef2, typeText);
     parentGfx.append(groupDef);
     parentGfx.append(groupDef2);
-    
+
   }
 
   drawVMData(parentGfx, data, position) {
