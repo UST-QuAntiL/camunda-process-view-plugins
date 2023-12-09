@@ -167,10 +167,22 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         for (let element of elementArray) {
             console.log("get extensionElements");
             console.log(element);
+            if (element.type === "bpmn:SubProcess" && diagramElement.id === element.id) {
+        
+                console.log("the subprocess extensionelements are:", element);
+                console.log(element);
+                console.log(diagramElement)
+                let extensionElementNames = element.businessObject.$attrs["opentosca:extension"].split(",");
+                console.log("extensionElementNames");
+                console.log(extensionElementNames);
+                variablesToDisplay = extensionElementNames
+            }
             if (element.type === "bpmn:ServiceTask" && diagramElement.id === element.id) {
                 console.log("ids are matching")
                 let extensionElements = element.businessObject.extensionElements.values;
                 console.log("the extensionelements are:", extensionElements);
+                console.log(element);
+                console.log(diagramElement)
 
                 for (let extensionElement of extensionElements) {
                     console.log(extensionElement);

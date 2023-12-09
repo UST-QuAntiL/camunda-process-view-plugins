@@ -53,7 +53,7 @@ const STROKE_STYLEOVERLAY = {
 };
 
 async function getVMQProvData(qProvEndpoint) {
-  const apiEndpoint = `${qProvEndpoint}/characteristics`; // Updated variable name
+  const apiEndpoint = `${qProvEndpoint}/characteristics`;
   console.log(apiEndpoint);
   try {
     const response = await fetch(apiEndpoint);
@@ -1132,10 +1132,10 @@ export default class OpenTOSCARenderer {
         svgAttr(rect, { height: totalHeight });
         i = 0;
         let verticalOffset = 0;
-        parentGfx.append(groupDef3);
         for (const [variable, value] of Object.entries(qprovData)) {
           console.log(text);
           let textfieldId = element.id + '_task' + i;
+          text.id = textfieldId
           if (document.getElementById(textfieldId) !== null) {
             const initialTextElement = document.getElementById(textfieldId).children[0];
 
@@ -1146,6 +1146,7 @@ export default class OpenTOSCARenderer {
           }
           i++;
         }
+        parentGfx.append(groupDef3);
 
       });
       groupDef.addEventListener('mouseleave', async () => {
