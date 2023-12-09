@@ -158,7 +158,12 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         console.log(variables)
 
         let variablesToDisplay = [];
-        console.log(elementArray)
+        console.log(elementArray);
+        let type = diagramElement.businessObject.$attrs["quantme:quantmeTaskType"];
+        if(type === "quantme:ParameterOptimizationTask") {
+            variablesToDisplay.push("optimizedParameters");
+            variablesToDisplay.push("optimizationLandscape");
+        }
         for (let element of elementArray) {
             console.log("get extensionElements");
             console.log(element);
@@ -277,10 +282,6 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px"><p>${variableText}</p></div>
             </div>`;
             if (variableText !== '<br><br>' && variableText !== '') {
-                console.log("VARIABLESTEXT");
-                console.log(variableText)
-                console.log(diagramElement.id);
-                console.log(diagramElement);
                 diagramElement.html = html;
             }
             if (attributes["quantme:quantmeTaskType"] !== undefined) {
@@ -328,22 +329,14 @@ function registerOverlay(diagramElements) {
                     visualElements.addEventListener('mouseenter', function () {
                         console.log(selectedElement.innerHTML);
                         if (!selectedElement.innerHTML.includes(addedHtml)) {
-                            console.log("add")
-                            console.log(diagramElement.html)
                             selectedElement.insertAdjacentHTML('beforeend', diagramElement.html);
                             console.log('Mouse entered a visual element!');
                         }
                     });
                     visualElements.addEventListener('mouseleave', function () {
-                        console.log(selectedElement.innerHTML);
-                        console.log(addedHtml)
-                        console.log(selectedElement)
-                        console.log(domElement);
                         // Iterate over each child of the parent element
                         for (var i = 0; i < selectedElement.children.length; i++) {
-                            console.log("child")
                             var child = selectedElement.children[i];
-                            console.log(child)
 
                             // Check if the child has the data-element-id attribute
                             if (child.hasAttribute("data-container-id")) {
