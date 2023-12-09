@@ -50,10 +50,14 @@ export async function addSubprocessToggleButton(viewer, options, { control }) {
         children.forEach(findSubprocesses);
         for(let child of children) {
             let qProvUrl = child.id + "_qProvUrl";
-            child.businessObject.$attrs.qProvUrl = qProvUrl;
             if (variables.hasOwnProperty(qProvUrl)) {
                 let value = variables[qProvUrl].value;
                 child.businessObject.$attrs.qProvUrl = value;
+            }
+            let completeModelUrl = "completeModelUrl_" + child.id;
+            if (variables.hasOwnProperty(completeModelUrl)) {
+                let value = variables[completeModelUrl].value;
+                child.businessObject.$attrs["opentosca:deploymentModelUrl"]  = value;
             }
         }
         for (const subProcess of subProcesses) {
