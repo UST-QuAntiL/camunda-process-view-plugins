@@ -37,6 +37,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     let activeView = response['activeProcessView'];
     let activeViewXml = response['activeProcessViewXml'];
     console.log("Active view to visualize process view overlay for: ", activeView);
+
     // get element registry and overlays to retrieve elements and attach new overlays to them
     let overlays = viewer.get("overlays");
     let canvas = viewer.get("canvas");
@@ -49,35 +50,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 
     let allElements = viewerElementRegistry.getAll();
 
-    // add deployment view overlay
     if (!activeView.includes('view-before-rewriting')) {
-        console.log("add deployment view overlay")
-        let variables = await getVariables(camundaAPI, processInstanceId);
-        console.log(variables);
-        for (let diagramElement of allElements) {
-            let deploymentBuildPlanInstanceUrl = diagramElement.id + "_deploymentBuildPlanInstanceUrl";
-            if (variables.hasOwnProperty(deploymentBuildPlanInstanceUrl)) {
-                let value = variables[deploymentBuildPlanInstanceUrl].value;
-
-                console.log(deploymentBuildPlanInstanceUrl);
-                if (variable.name === deploymentBuildPlanInstanceUrl) {
-                    let value = variable.value;
-                    console.log(value);
-                    let vmNetwork = await getVMNetworkId(value);
-                    if (vmNetwork !== undefined) {
-                        console.log(vmNetwork)
-                        let characteristics = await getVMQProvData("http://193.196.54.228:8094/qprov", vmNetwork);
-                        for (const [variable, value] of Object.entries(characteristics)) {
-                            console.log(`${variable}: ${value}`);
-                        }
-                    }
-                }
-            } else {
-                return undefined; // Variable not found
-            }
-
-        }
-
         console.log("Current view equals executed workflow. No overlay required!");
         return;
     }
@@ -94,18 +67,15 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 
     // add overlay to remove existing elements from the diagram
     console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
-    console.log(viewer.get("canvas"))
-    viewer.importXML(activeViewXml)
+
     viewerElementRegistry = viewer.get("elementRegistry")
     let quantmeElementArray = viewerElementRegistry.getAll();
     console.log('Diagram contains the following elements: ', elementArray);
-
 
     // create modeler capable of understanding the QuantME modeling constructs
     let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
     console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
     let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
-    let bpmnReplace = quantmeModeler.get("bpmnReplace");
     quantmeElementArray = viewerElementRegistry.getAll();
 
     // get the xml of the modeler and update the view
@@ -114,6 +84,9 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 
     // register the events and rendering
     new QuantMERenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
+    quantmeElementRegistry = quantmeModeler.get('elementRegistry');
+    quantmeElementArray = viewerElementRegistry.getAll();
+    console.log("all elements are: ", quantmeElementArray);
 
     // get the currently active activities for the process instance
     let activeActivity = await getActiveActivities(camundaAPI, processInstanceId);
@@ -127,7 +100,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 
     // visualize process token for retrieved active activities
     activeActivity.forEach(activeActivity =>
-        visualizeActiveActivities(activeActivity['activityId'], overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, allElements, processInstanceId, camundaAPI));
+        visualizeActiveActivities(activeActivity['activityId'], quantmeElementRegistry, viewerElementRegistry));
 
     await computeOverlay(camundaAPI, processInstanceId, quantmeElementArray, allElements);
     registerOverlay(quantmeElementArray);
@@ -142,11 +115,17 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
     console.log("Register overlay for diagram elements ", diagramElements);
     let variables = await getVariables(camundaAPI, processInstanceId);
 
+    // extract qprov endpoint & provider
+    const qprovEndpoint = variables["QProvEndpoint"].value;
+    const provider = variables["provider"] !== undefined ? variables["provider"].value : undefined;
+
+
     // the default qpu
     let selectedQpu = '';
     if (variables["selected_qpu"]) {
         selectedQpu = variables["selected_qpu"].value;
     }
+
     let filteredDiagramElements = diagramElements.filter(diagramElement => {
         let attrs = diagramElement.businessObject.$attrs;
         return attrs !== undefined && attrs["quantme:quantmeTaskType"] !== undefined;
@@ -158,7 +137,6 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         console.log(variables)
 
         let variablesToDisplay = [];
-        console.log(elementArray);
         let type = diagramElement.businessObject.$attrs["quantme:quantmeTaskType"];
         if (type === "quantme:ParameterOptimizationTask") {
             variablesToDisplay.push("optimizedParameters");
@@ -170,20 +148,17 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             let onDemandSubprocessId = diagramElement.id + '_plane';
             if (element.type === "bpmn:SubProcess" && onDemandSubprocessId === element.id) {
 
-                console.log("the subprocess extensionelements are:", element);
+                console.log("the subprocess extensionelements are: ", element);
                 if (element.businessObject.$attrs["opentosca:extension"] !== undefined) {
                     let extensionElementNames = element.businessObject.$attrs["opentosca:extension"].split(",");
-                    variablesToDisplay = extensionElementNames
+                    variablesToDisplay = extensionElementNames;
                 }
             }
 
             // extract extension elements from service task for overlay
             if (element.type === "bpmn:ServiceTask" && diagramElement.id === element.id) {
-                console.log("ids are matching")
                 let extensionElements = element.businessObject.extensionElements.values;
-                console.log("the extensionelements are:", extensionElements);
-                console.log(element);
-                console.log(diagramElement)
+                console.log("the extensionelements are: ", extensionElements);
 
                 for (let extensionElement of extensionElements) {
                     console.log(extensionElement);
@@ -191,7 +166,6 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                     // requires to retrieve the children
                     if (extensionElement.$type === "camunda:connector") {
                         for (let children of extensionElement.$children) {
-                            console.log(children);
                             if (children.$type === "camunda:inputOutput") {
                                 for (let inoutParam of children.$children) {
                                     if (inoutParam.$type === "camunda:outputParameter") {
@@ -238,45 +212,39 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         for (let fileVariable of fileVariables) {
             console.log("----fileVariable")
             let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
-            let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
+            let value = await getVariableInstanceData(camundaAPI, variableInstanceId);
             if (value !== "") {
                 console.log(value);
                 variableText = variableText + '<strong>' + (`${fileVariable}</strong>:<br> <img class="quantum-view-picture" src="${value}" style="max-width: 100%;height: auto;"/>`)
             }
         }
 
-        let providerId = await getQProvProviderId("http://localhost:8094/qprov", "ibmq");
-        console.log("the response from QProv");
-        console.log(providerId);
-        let attributes = diagramElement.businessObject.$attrs;
-
         let qProvText = '';
-        if (selectedQpu !== '') {
+        let attributes = diagramElement.businessObject.$attrs;
+        if (qprovEndpoint !== undefined && provider !== undefined) {
 
-            let qprovData = await getQPUData("http://localhost:8094/qprov", providerId, selectedQpu);
-            console.log("QProv Data")
-            console.log(qprovData);
-            qProvText = generateOverlayText(qprovData);
-            console.log("DAS DIAGRAM");
-            console.log(diagramElement);
+            let providerId = await getQProvProviderId(qprovEndpoint, provider);
+            console.log("the response from QProv");
+            console.log(providerId);
 
-            console.log(attributes);
-            if (attributes["quantme:containedElements"] !== undefined) {
-                if (attributes["quantme:containedElements"].includes(diagramElement.id)) {
 
-                    //let entryPoint = entryPoints[0];
-                    // add overlay to the retrieved root element
-                    let entryPoint = quantmeElementRegistry.get(diagramElement.id);
-                    console.log(entryPoint);
+            if (selectedQpu !== '' && providerId) {
+                let qprovData = await getQPUData(qprovEndpoint, providerId, selectedQpu);
+                console.log("QProv Data")
+                console.log(qprovData);
+                qProvText = generateOverlayText(qprovData);
+                if (attributes["quantme:containedElements"] !== undefined) {
+                    if (attributes["quantme:containedElements"].includes(diagramElement.id)) {
+                        
+                        // add overlay to the retrieved root element
+                        let entryPoint = quantmeElementRegistry.get(diagramElement.id);
 
-                    for (let child of entryPoint.children) {
-                        let childTop = child.y + child.height + 11;
-                        console.log(child)
-                        console.log(child.businessObject.$attrs['quantme:quantmeTaskType']);
+                        for (let child of entryPoint.children) {
+                            let childTop = child.y + child.height + 11;
 
-                        if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
-                            if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
-                                const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
+                            if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
+                                if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
+                                    const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
                 <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${child.x}px; top: ${childTop}px; transform-origin: left top;">
                     <div class="activity-bottom-left-position instances-overlay">
                         <span class="badge instance-count" data-original-title="" title="">1</span>
@@ -285,7 +253,8 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                 </div>
                 <div class="data-overlay" style="position: absolute; left: ${child.x}px; top: ${childTop}px"><p>${qProvText}</p></div>
             </div>`;
-                                entryPoint.html = html;
+                                    entryPoint.html = html;
+                                }
                             }
                         }
                     }
@@ -329,49 +298,35 @@ function registerOverlay(diagramElements) {
 
         let attrs = diagramElement.businessObject.$attrs;
         if (attrs !== undefined) {
-            console.log(attrs["quantme:quantmeTaskType"]);
-
-
+            console.log("Currently handling overlay for task type ", attrs["quantme:quantmeTaskType"]);
             if (visualElements !== null && attrs["quantme:quantmeTaskType"] !== undefined) {
-                console.log(visualElements);
-
                 const addedHtml = diagramElement.html;
-                console.log(addedHtml);
-                var tempElement = document.createElement('div');
+                let tempElement = document.createElement('div');
                 tempElement.innerHTML = diagramElement.html;
-                var domElement = tempElement.firstChild;
                 if (addedHtml !== null && addedHtml !== undefined) {
                     visualElements.addEventListener('mouseenter', function () {
-                        console.log(selectedElement.innerHTML);
                         if (!selectedElement.innerHTML.includes(addedHtml)) {
                             selectedElement.insertAdjacentHTML('beforeend', diagramElement.html);
-                            console.log('Mouse entered a visual element!');
                         }
                     });
                     visualElements.addEventListener('mouseleave', function () {
                         // Iterate over each child of the parent element
-                        for (var i = 0; i < selectedElement.children.length; i++) {
-                            var child = selectedElement.children[i];
+                        for (let i = 0; i < selectedElement.children.length; i++) {
+                            let child = selectedElement.children[i];
 
                             // Check if the child has the data-element-id attribute
                             if (child.hasAttribute("data-container-id")) {
-                                var dataElementId = child.getAttribute("data-container-id");
-                                var speechBubbleElement = child.querySelector('.data-overlay');
-                                console.log(speechBubbleElement)
-                                console.log(dataElementId);
-                                console.log(diagramElement.id)
+                                let dataElementId = child.getAttribute("data-container-id");
+                                let overlay = child.querySelector('.data-overlay');
 
                                 // Check if the data-element-id matches the target value
-                                if (dataElementId === diagramElement.id && speechBubbleElement !== null) {
+                                if (dataElementId === diagramElement.id && overlay !== null) {
                                     // Remove the matching child
-                                    child.removeChild(speechBubbleElement);
+                                    child.removeChild(overlay);
                                     console.log("Child element removed successfully.");
                                 }
                             }
                         }
-                        console.log(selectedElement)
-                        //selectedElement.innererHTML = selectedElement.innerHTML.replace(addedHtml, '');
-                        console.log('Mouse left a visual element!');
                     });
                 }
             }
@@ -403,25 +358,6 @@ async function getActiveActivities(camundaAPI, processInstanceId) {
 }
 
 /**
-* Get the currently active activities for the given process instance
-*
-* @param buildPlanInstanceUrl the Camunda APIs to access the backend
-* @param processInstanceId the ID of the process instance to retrieve the active activity for
-* @returns an array with currently active activities
-*/
-async function getVMNetworkId(buildPlanInstanceUrl) {
-    console.log("Retrieving properties from URL: ", buildPlanInstanceUrl)
-    let res = await fetch(buildPlanInstanceUrl,
-        {
-            headers: {
-                'Accept': 'application/json',
-            }
-        }
-    )
-    return (await res.json()).inputs.find(input => input.name === "VMNetworks").value;
-}
-
-/**
 * Get the currently active transition activities for the given process instance
 *
 * @param camundaAPI the Camunda APIs to access the backend
@@ -442,8 +378,6 @@ async function getActiveTransitionActivities(camundaAPI, processInstanceId) {
     return (await res.json())['childTransitionInstances'];
 
 }
-
-// engine-rest/variable-instance?processInstanceIdIn=c7ea31a1-8ba6-11ee-bffc-0242ac110002&variableName=circuitVisualization
 
 /**
  * Get the variable instance id from the process instance
@@ -473,7 +407,7 @@ async function getVariableInstanceId(camundaAPI, processInstanceId, variableName
  * @param processInstanceId the ID of the process instance to retrieve the active activity for
  * @returns an array with variables
  */
-async function getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId) {
+async function getVariableInstanceData(camundaAPI, variableInstanceId) {
     const activityInstanceEndpoint = `/engine-rest/variable-instance/${variableInstanceId}/data`
     console.log("Retrieving variables from URL: ", activityInstanceEndpoint)
     let res = await fetch(activityInstanceEndpoint,
@@ -516,60 +450,22 @@ async function getVariables(camundaAPI, processInstanceId) {
  * @param provider the ID of the provider to retrieve the id for
  * @returns the id of the provider
  */
-async function getVMQProvData(qProvEndpoint, vmNetworkId) {
-    const apiEndpoint = `${qProvEndpoint}/virtual-machines/${vmNetworkId}/characteristics`; // Updated variable name
-    console.log(apiEndpoint);
-    try {
-        const response = await fetch(apiEndpoint);
-        const data = await response.json();
-
-        // Extract the list of hardware characteristics
-        const hardwareCharacteristics = data._embedded.hardwareCharacteristicsDtoes;
-
-        // Sort the array based on the recordingTime in descending order
-        const sortedData = hardwareCharacteristics.sort((a, b) => new Date(b.recordingTime) - new Date(a.recordingTime));
-
-        // Get the data with the latest timestamp
-        const latestData = sortedData[0];
-
-        // Log the result
-        console.log(latestData);
-
-        if (latestData) {
-            return latestData;
-        } else {
-            console.log(`No data collected.`);
-            return null;
-        }
-    } catch (error) {
-        console.error('Error fetching data:', error);
-        return null;
-    }
-}
-
-/**
- * Get the id of the selected provider from QProv.
- *
- * @param qProvEndpoint the QProv endpoint to access the data
- * @param provider the ID of the provider to retrieve the id for
- * @returns the id of the provider
- */
 async function getQProvProviderId(qProvEndpoint, providerName) {
-    const apiEndpoint = `${qProvEndpoint}/providers`; // Updated variable name
+    const apiEndpoint = `${qProvEndpoint}/providers`;
     console.log(apiEndpoint);
     try {
         const response = await fetch(apiEndpoint);
         const data = await response.json();
 
         // Find the provider with the given name
-        const ibmqProvider = data._embedded.providerDtoes.find(provider => provider.name === providerName);
-        console.log(ibmqProvider);
+        const provider = data._embedded.providerDtoes.find(provider => provider.name === providerName);
+        console.log(provider);
 
-        if (ibmqProvider) {
+        if (provider) {
             // Extract the ID from the found provider
-            const ibmqId = ibmqProvider.id;
-            console.log(ibmqId)
-            return ibmqId;
+            const providerId = provider.id;
+            console.log(providerId)
+            return providerId;
         } else {
             console.log(`Provider with name "${providerName}" not found.`);
             return null;
@@ -589,7 +485,6 @@ async function getQProvProviderId(qProvEndpoint, providerName) {
  * @returns the id of the provider
  */
 async function getQPUData(qProvEndpoint, providerId, qpuName) {
-    //http://localhost:8094/qprov/providers/4c490baf-9859-4e2f-9777-6309f93ceeea/qpus
     const apiEndpoint = `${qProvEndpoint}/providers/${providerId}/qpus`; // Updated variable name
     console.log(apiEndpoint);
     try {
@@ -597,9 +492,9 @@ async function getQPUData(qProvEndpoint, providerId, qpuName) {
         const data = await response.json();
 
         // Find the QPU with the given name
-        const ibmqQpu = data._embedded.qpuDtoes.find(qpu => qpu.name === qpuName);
+        const qpu = data._embedded.qpuDtoes.find(qpu => qpu.name === qpuName);
 
-        if (ibmqQpu) {
+        if (qpu) {
             // Extract the relevant data from the QPU
             const { name, queueSize, numberOfQubits, avgT1Time, avgT2Time, avgReadoutError, avgSingleQubitGateError, avgMultiQubitGateError, avgSingleQubitGateTime, avgMultiQubitGateTime, maxGateTime } = ibmqQpu;
             return { name, queueSize, numberOfQubits, avgT1Time, avgT2Time, avgReadoutError, avgSingleQubitGateError, avgMultiQubitGateError, avgSingleQubitGateTime, avgMultiQubitGateTime, maxGateTime };
@@ -637,7 +532,7 @@ function generateOverlayText(obj) {
  * @param processInstanceId the ID of the process instance for which the process token is visualized
  * @param camundaAPI the Camunda APIs to access the backend
  */
-async function visualizeActiveActivities(activeActivityId, overlays, quantmeElementRegistry, viewerElementRegistry, rootElement, elementArray, processInstanceId, camundaAPI) {
+async function visualizeActiveActivities(activeActivityId, quantmeElementRegistry, viewerElementRegistry) {
     console.log('Visualizing process token for active activity with ID: ', activeActivityId);
 
     // get activity from executed workflow related to given ID
@@ -672,7 +567,6 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
     // set the token on the task of the subprocess
     if (activeActivityAttributes['quantme:containedElements'] !== undefined) {
         let subProcess = quantmeElementRegistry.get(activeActivityId);
-        console.log(subProcess);
 
         // currently the subprocess contains exactly one quantme task
         for (let child of subProcess.children) {
@@ -694,7 +588,6 @@ async function visualizeActiveActivities(activeActivityId, overlays, quantmeElem
         }
     }
 }
-
 
 /**
  * Get the currently active process view and the corresponding Xml file from the backend

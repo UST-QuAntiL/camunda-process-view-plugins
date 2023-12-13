@@ -38,14 +38,8 @@ export default class QuantMERenderer {
           let attrs = element.businessObject.$attrs;
           if (attrs !== undefined) {
             let type = attrs["quantme:quantmeTaskType"];
-            //if(type === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS){
-              //let subprocess = this.drawHardwareSelectionSubprocess(parentGfx, quantMEPathMap, element, task);
-              //console.log("renderer subprocess")
-              //return subprocess;
             if (type !== undefined) {
-              console.log("task renderer")
               drawTaskSVG(parentGfx, type, null, true);
-              //this.addOverlay(parentGfx, element, bpmnRenderer);
             }
             return task;
           }
@@ -54,12 +48,10 @@ export default class QuantMERenderer {
 
       if (element.type === "bpmn:DataObjectReference") {
         if (type === 'render.shape') {
-          console.log("render new")
           let task = bpmnRenderer.drawShape(parentGfx, element);
           let attrs = element.businessObject.$attrs;
           if (attrs !== undefined) {
-            let type = attrs["quantmeTaskType"];
-            console.log(type);
+            let type = attrs["quantme:quantmeTaskType"];
             if (type !== undefined) {
               drawDataObjectSVG(parentGfx, type, null, true);
             }
@@ -70,9 +62,9 @@ export default class QuantMERenderer {
 
     });
 
-    var computeStyle = styles.computeStyle;
+    let computeStyle = styles.computeStyle;
 
-    var defaultFillColor = "white",
+    let defaultFillColor = "white",
       defaultStrokeColor = "white";
 
     function drawDataObjectSVG(parentGfx, iconID) {
@@ -93,9 +85,9 @@ export default class QuantMERenderer {
     }
 
     function drawTaskSVG(parentGfx, iconID, svgAttributes, foreground) {
-      var importsvg = getQuantMESVG(iconID);
-      var innerSVGstring = importsvg.svg;
-      var transformDef = importsvg.transform;
+      let importsvg = getQuantMESVG(iconID);
+      let innerSVGstring = importsvg.svg;
+      let transformDef = importsvg.transform;
 
       const groupDef = svgCreate("g");
       svgAttr(groupDef, { transform: transformDef });
@@ -145,9 +137,9 @@ export default class QuantMERenderer {
         parentGfx,
         element
       ) {
-        var subprocess = self.renderer("bpmn:SubProcess")(parentGfx, element);
+        let subprocess = self.renderer("bpmn:SubProcess")(parentGfx, element);
 
-        var pathData = quantMEPathMap.getPath(
+        let pathData = quantMEPathMap.getPath(
           "SUBPROCESS_QUANTUM_HARDWARE_SELECTION"
         );
         drawPath(parentGfx, pathData, {
@@ -171,12 +163,12 @@ export default class QuantMERenderer {
         return subprocess;
       },
       [consts.CIRCUIT_CUTTING_SUBPROCESS]: function (self, parentGfx, element) {
-        var subprocess = self.renderer("bpmn:SubProcess")(parentGfx, element);
+        let subprocess = self.renderer("bpmn:SubProcess")(parentGfx, element);
         drawTaskSVG(parentGfx, "SUBPROCESS_TYPE_CIRCUIT_CUTTING");
         return subprocess;
       },
       [consts.CIRCUIT_CUTTING_TASK]: function (self, parentGfx, element) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
+        let task = self.renderer("bpmn:Task")(parentGfx, element);
         drawTaskSVG(parentGfx, "SUBPROCESS_TYPE_CIRCUIT_CUTTING");
         return task;
       },
@@ -185,14 +177,14 @@ export default class QuantMERenderer {
         parentGfx,
         element
       ) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
+        let task = self.renderer("bpmn:Task")(parentGfx, element);
         drawTaskSVG(parentGfx, "TASK_TYPE_RESULT_COMBINATION");
         return task;
       },
       [consts.QUANTUM_COMPUTATION_TASK]: function (self, parentGfx, element) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
+        let task = self.renderer("bpmn:Task")(parentGfx, element);
 
-        var pathData = quantMEPathMap.getPath("TASK_TYPE_QUANTUM_COMPUTATION");
+        let pathData = quantMEPathMap.getPath("TASK_TYPE_QUANTUM_COMPUTATION");
 
         drawPath(parentGfx, pathData, {
           transform: "scale(0.3)",
@@ -208,10 +200,10 @@ export default class QuantMERenderer {
         parentGfx,
         element
       ) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
+        let task = self.renderer("bpmn:Task")(parentGfx, element);
 
         // create circuit paths without filled shapes
-        var pathData = quantMEPathMap.getPath("TASK_TYPE_CIRCUIT_LOADING");
+        let pathData = quantMEPathMap.getPath("TASK_TYPE_CIRCUIT_LOADING");
         drawPath(parentGfx, pathData, {
           transform: "scale(0.3)",
           strokeWidth: 2.5,
@@ -231,9 +223,9 @@ export default class QuantMERenderer {
         return task;
       },
       [consts.DATA_PREPARATION_TASK]: function (self, parentGfx, element) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
+        let task = self.renderer("bpmn:Task")(parentGfx, element);
 
-        var pathData = quantMEPathMap.getPath("TASK_TYPE_DATA_PREPARATION");
+        let pathData = quantMEPathMap.getPath("TASK_TYPE_DATA_PREPARATION");
         drawPath(parentGfx, pathData, {
           transform: "scale(0.3)",
           strokeWidth: 2.5,
@@ -285,9 +277,9 @@ export default class QuantMERenderer {
         return task;
       },
       [consts.ORACLE_EXPANSION_TASK]: function (self, parentGfx, element) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
+        let task = self.renderer("bpmn:Task")(parentGfx, element);
 
-        var pathData = quantMEPathMap.getPath("TASK_TYPE_ORACLE_EXPANSION");
+        let pathData = quantMEPathMap.getPath("TASK_TYPE_ORACLE_EXPANSION");
         drawPath(parentGfx, pathData, {
           transform: "scale(0.3)",
           strokeWidth: 2.5,
@@ -331,9 +323,9 @@ export default class QuantMERenderer {
         parentGfx,
         element
       ) {
-        var task = self.renderer("bpmn:Task")(parentGfx, element);
+        let task = self.renderer("bpmn:Task")(parentGfx, element);
 
-        var pathData = quantMEPathMap.getPath("TASK_TYPE_CIRCUIT_EXECUTION");
+        let pathData = quantMEPathMap.getPath("TASK_TYPE_CIRCUIT_EXECUTION");
         drawPath(parentGfx, pathData, {
           transform: "scale(0.3)",
           strokeWidth: 2.5,
@@ -354,13 +346,13 @@ export default class QuantMERenderer {
     };
 
     setTimeout(function () {
-      var existingDefs = domQueryAll("marker", canvas._svg);
+      let existingDefs = domQueryAll("marker", canvas._svg);
       if (existingDefs != null) {
-        var createdNewDefs = false;
+        let createdNewDefs = false;
         for (let i = 0; i < existingDefs.length; i++) {
           if (existingDefs[i].parentElement.parentElement.nodeName !== "svg") {
             if (createdNewDefs === false) {
-              var newDefs = svgCreate("defs");
+              let newDefs = svgCreate("defs");
               svgAppend(canvas._svg, newDefs);
               createdNewDefs = true;
             }
@@ -382,7 +374,7 @@ export default class QuantMERenderer {
     }
 
     // QuantME elements can be handled
-    for (var i = 0; i < quantmeReplaceOptions.TASK.length; i++) {
+    for (let i = 0; i < quantmeReplaceOptions.TASK.length; i++) {
       if (element.type === quantmeReplaceOptions.TASK[i].target.type) {
         return true;
       }
@@ -392,52 +384,10 @@ export default class QuantMERenderer {
     return false;
   }
 
-  drawHardwareSelectionSubprocess(parentGfx,quantMEPathMap, element, subprocess){
-    var pathData = quantMEPathMap.getPath(
-      "SUBPROCESS_QUANTUM_HARDWARE_SELECTION"
-    );
-    drawPath(parentGfx, pathData, {
-      transform: "scale(0.5)",
-      strokeWidth: 1.5,
-      fill: getFillColor(element, defaultFillColor),
-      stroke: getStrokeColor(element, defaultStrokeColor),
-    });
-
-    // create circuit paths with filled shapes
-    pathData = quantMEPathMap.getPath(
-      "SUBPROCESS_QUANTUM_HARDWARE_SELECTION_FILL"
-    );
-    drawPath(parentGfx, pathData, {
-      transform: "scale(0.5)",
-      strokeWidth: 1.5,
-      fill: getFillColor(element, "#000000"),
-      stroke: getStrokeColor(element, defaultStrokeColor),
-    });
-    console.log(subprocess)
-
-    return subprocess;
-
-  }
-
-  addOverlay(parentGfx, element, bpmnRenderer) {
-
-
-    let groupDef = svgCreate('g');
-    
-    svgAppend(parentGfx, svgCreate("path", {
-      d: "M -260 -110 L 360 -110 L 360 -10   L 55 -10   L 50 -5  L 45 -10  L -260 -10 Z",
-      fill: "white",
-      stroke: "#777777",
-      "pointer-events": "all"
-  }));
-    svgAttr(groupDef, {transform: `matrix(1, 0, 0, 1, ${-238}, ${-78})`});
-
-}
-
   drawShape(parentNode, element) {
     // handle QuantME elements
     if (element.type in this.quantMeHandlers) {
-      var h = this.quantMeHandlers[element.type];
+      let h = this.quantMeHandlers[element.type];
 
       /* jshint -W040 */
       return h(this, parentNode, element);
