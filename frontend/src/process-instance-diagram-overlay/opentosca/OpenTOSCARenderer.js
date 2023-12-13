@@ -290,7 +290,7 @@ export default class OpenTOSCARenderer {
       }
     });
 
-    // add the correct layout to gateway 
+    // add the correct layout to gateway
     svgAppend(groupDef, svgCreate("path", {
       d: "m 16,15 7.42857142857143,9.714285714285715 -7.42857142857143,9.714285714285715 3.428571428571429,0 5.714285714285715,-7.464228571428572 5.714285714285715,7.464228571428572 3.428571428571429,0 -7.42857142857143,-9.714285714285715 7.42857142857143,-9.714285714285715 -3.428571428571429,0 -5.714285714285715,7.464228571428572 -5.714285714285715,-7.464228571428572 -3.428571428571429,0 z",
       style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
@@ -437,7 +437,7 @@ export default class OpenTOSCARenderer {
       }
     });
 
-    // add the correct layout to gateway 
+    // add the correct layout to gateway
     svgAppend(groupDef, svgCreate("path", {
       d: "m 16,15 7.42857142857143,9.714285714285715 -7.42857142857143,9.714285714285715 3.428571428571429,0 5.714285714285715,-7.464228571428572 5.714285714285715,7.464228571428572 3.428571428571429,0 -7.42857142857143,-9.714285714285715 7.42857142857143,-9.714285714285715 -3.428571428571429,0 -5.714285714285715,7.464228571428572 -5.714285714285715,-7.464228571428572 -3.428571428571429,0 z",
       style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
@@ -498,7 +498,7 @@ export default class OpenTOSCARenderer {
       }
     });
 
-    // add the correct layout to gateway 
+    // add the correct layout to gateway
     svgAppend(groupDef, svgCreate("path", {
       d: "m 16,15 7.42857142857143,9.714285714285715 -7.42857142857143,9.714285714285715 3.428571428571429,0 5.714285714285715,-7.464228571428572 5.714285714285715,7.464228571428572 3.428571428571429,0 -7.42857142857143,-9.714285714285715 7.42857142857143,-9.714285714285715 -3.428571428571429,0 -5.714285714285715,7.464228571428572 -5.714285714285715,-7.464228571428572 -3.428571428571429,0 z",
       style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
@@ -577,7 +577,7 @@ export default class OpenTOSCARenderer {
       }
     });
 
-    // add the correct layout to gateway 
+    // add the correct layout to gateway
     svgAppend(groupDef, svgCreate("path", {
       d: "m 16,15 7.42857142857143,9.714285714285715 -7.42857142857143,9.714285714285715 3.428571428571429,0 5.714285714285715,-7.464228571428572 5.714285714285715,7.464228571428572 3.428571428571429,0 -7.42857142857143,-9.714285714285715 7.42857142857143,-9.714285714285715 -3.428571428571429,0 -5.714285714285715,7.464228571428572 -5.714285714285715,-7.464228571428572 -3.428571428571429,0 z",
       style: "fill: rgb(34, 36, 42); stroke-linecap: round; stroke-linejoin: round; stroke: rgb(34, 36, 42); stroke-width: 1px;"
@@ -1019,8 +1019,8 @@ export default class OpenTOSCARenderer {
   }
 
   async drawNodeTemplate(parentGfx, nodeTemplate, position, element) {
-    const groupDef = svgCreate("g");
-    svgAttr(groupDef, {
+    const groupNodeTemplate = svgCreate("g");
+    svgAttr(groupNodeTemplate, {
       transform: `matrix(1, 0, 0, 1, ${position.x.toFixed(
         2
       )}, ${position.y.toFixed(2)})`,
@@ -1032,9 +1032,9 @@ export default class OpenTOSCARenderer {
       ...STROKE_STYLE,
     });
 
-    svgAppend(groupDef, rect);
+    svgAppend(groupNodeTemplate, rect);
 
-    const text = this.textRenderer.createText(nodeTemplate.name, {
+    const nodeTemplateNameText = this.textRenderer.createText(nodeTemplate.name, {
       box: {
         width: NODE_WIDTH,
         height: NODE_HEIGHT / 2,
@@ -1042,10 +1042,11 @@ export default class OpenTOSCARenderer {
       align: "center-middle",
       style: {
         fill: "black",
+        "pointer-events":"none"
       },
     });
 
-    svgAppend(groupDef, text);
+    svgAppend(groupNodeTemplate, nodeTemplateNameText);
 
     const groupDef2 = svgCreate("g");
     svgAttr(groupDef2, {
@@ -1064,7 +1065,7 @@ export default class OpenTOSCARenderer {
       typeName = typeMatches[1];
     }
 
-    const typeText = this.textRenderer.createText("(" + typeName + ")", {
+    const nodeTypeNameText = this.textRenderer.createText("(" + typeName + ")", {
       box: {
         width: NODE_WIDTH,
         height: NODE_HEIGHT / 2,
@@ -1072,6 +1073,7 @@ export default class OpenTOSCARenderer {
       align: "center-middle",
       style: {
         fill: "#777777",
+        "pointer-events":"none",
       },
     });
 
@@ -1079,12 +1081,12 @@ export default class OpenTOSCARenderer {
 
 
       //parentGfx.append(groupDef3);
-      groupDef.addEventListener('mouseenter', async () => {
+      groupNodeTemplate.addEventListener('mouseenter', async () => {
         let qprovData = await getVMQProvData(element.businessObject.get("qProvUrl"));
-        const groupDef3 = svgCreate("g", { id: element.id + "ubuntu_group" });
+        const groupVMAttributes = svgCreate("g", { id: element.id + "ubuntu_group" });
         const HORIZONTAL_SPACING = 50; // Adjust as needed
-        const VERTICAL_SPACING = 10; // Adjust as needed
-        svgAttr(groupDef3, {
+        const VERTICAL_SPACING = 12; // Adjust as needed
+        svgAttr(groupVMAttributes, {
           transform: `matrix(1, 0, 0, 1, ${(position.x + NODE_WIDTH + HORIZONTAL_SPACING).toFixed(2)}, ${position.y.toFixed(2)})`,
         });
 
@@ -1096,7 +1098,7 @@ export default class OpenTOSCARenderer {
           id: element.id + "_rect"
         });
 
-        svgAppend(groupDef3, rect);
+        svgAppend(groupVMAttributes, rect);
 
         let textY = 0;
         let maxWidth = 300;
@@ -1114,9 +1116,13 @@ export default class OpenTOSCARenderer {
             style: {
               fill: "black",
             },
+
           });
 
           text.id = element.id + "_task" + i;
+          console.log("update qprov attribute: ", text)
+          text.children[0].setAttribute('y', 2 + (i+1)*12);
+          text.children[0].setAttribute('x', 5);
           i++;
           height = height + VERTICAL_SPACING;
 
@@ -1124,32 +1130,16 @@ export default class OpenTOSCARenderer {
           if (textWidth > maxWidth) {
             maxWidth = textWidth;
           }
-          svgAppend(groupDef3, text);
+          svgAppend(groupVMAttributes, text);
           textY += text.getBBox().height + VERTICAL_SPACING;
         }
 
-        const totalHeight = textY > NODE_HEIGHT ? textY : NODE_HEIGHT;
+        let totalHeight = (textY > NODE_HEIGHT ? textY : NODE_HEIGHT) + 7;
         svgAttr(rect, { height: totalHeight });
-        i = 0;
-        let verticalOffset = 0;
-        for (const [variable, value] of Object.entries(qprovData)) {
-          console.log(text);
-          let textfieldId = element.id + '_task' + i;
-          text.id = textfieldId
-          if (document.getElementById(textfieldId) !== null) {
-            const initialTextElement = document.getElementById(textfieldId).children[0];
-
-            verticalOffset += 10;
-
-            initialTextElement.setAttribute('y', verticalOffset);
-            initialTextElement.setAttribute('x', 10);
-          }
-          i++;
-        }
-        parentGfx.append(groupDef3);
+        parentGfx.append(groupVMAttributes);
 
       });
-      groupDef.addEventListener('mouseleave', async () => {
+      groupNodeTemplate.addEventListener('mouseleave', async () => {
         const groupDef3 = document.getElementById(element.id + "ubuntu_group");
         if (groupDef3) {
 
@@ -1167,8 +1157,8 @@ export default class OpenTOSCARenderer {
 
 
 
-    svgAppend(groupDef2, typeText);
-    parentGfx.append(groupDef);
+    svgAppend(groupDef2, nodeTypeNameText);
+    parentGfx.append(groupNodeTemplate);
     parentGfx.append(groupDef2);
 
   }
