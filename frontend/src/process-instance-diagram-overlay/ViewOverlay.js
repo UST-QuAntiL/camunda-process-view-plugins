@@ -102,8 +102,8 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
     activeActivity.forEach(activeActivity =>
         visualizeActiveActivities(activeActivity['activityId'], quantmeElementRegistry, viewerElementRegistry));
 
-    await computeOverlay(camundaAPI, processInstanceId, quantmeElementArray, allElements);
-    registerOverlay(quantmeElementArray);
+    await computeOverlay(camundaAPI, processInstanceId, quantmeElementArray, allElements, quantmeElementRegistry);
+    registerOverlay(quantmeElementArray, quantmeElementRegistry);
 }
 
 /**
@@ -111,7 +111,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 *
 * @param diagramElements contains the diagram elements to retrieve data
 */
-async function computeOverlay(camundaAPI, processInstanceId, diagramElements, elementArray) {
+async function computeOverlay(camundaAPI, processInstanceId, diagramElements, elementArray, quantmeElementRegistry) {
     console.log("Register overlay for diagram elements ", diagramElements);
     let variables = await getVariables(camundaAPI, processInstanceId);
 
@@ -127,15 +127,18 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
     }
 
     let filteredDiagramElements = diagramElements.filter(diagramElement => {
+        let element = quantmeElementRegistry.get(diagramElement.id);
         let attrs = diagramElement.businessObject.$attrs;
+        if (element !== undefined) {
+            return element.businessObject.$attrs !== undefined && element.businessObject.$attrs["quantme:quantmeTaskType"] !== undefined;
+        }
         return attrs !== undefined && attrs["quantme:quantmeTaskType"] !== undefined;
     });
     for (let diagramElement of filteredDiagramElements) {
+        let attrs = quantmeElementRegistry.get(diagramElement.id);
         let top = diagramElement.y + diagramElement.height + 11;
         let x = diagramElement.x;
         let overlayTop = diagramElement.y - 150;
-        console.log(variables)
-
         let variablesToDisplay = [];
         let type = diagramElement.businessObject.$attrs["quantme:quantmeTaskType"];
         if (type === "quantme:ParameterOptimizationTask") {
@@ -235,7 +238,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                 qProvText = generateOverlayText(qprovData);
                 if (attributes["quantme:containedElements"] !== undefined) {
                     if (attributes["quantme:containedElements"].includes(diagramElement.id)) {
-                        
+
                         // add overlay to the retrieved root element
                         let entryPoint = quantmeElementRegistry.get(diagramElement.id);
 
@@ -288,15 +291,18 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
 *
 * @param diagramElements contains the diagram elements to retrieve data
 */
-function registerOverlay(diagramElements) {
+function registerOverlay(diagramElements, quantmeElementRegistry) {
     console.log("Register overlay for diagram elements ", diagramElements);
     const selector = `.djs-overlay-container`;
     const selectedElement = document.querySelector(selector);
     for (let diagramElement of diagramElements) {
-        console.log(diagramElement);
+        let element = quantmeElementRegistry.get(diagramElement.id);
         let visualElements = document.querySelector(`g.djs-element[data-element-id="${diagramElement.id}"]`);
 
         let attrs = diagramElement.businessObject.$attrs;
+        if (element !== undefined) {
+            attrs = element.businessObject.$attrs;
+        }
         if (attrs !== undefined) {
             console.log("Currently handling overlay for task type ", attrs["quantme:quantmeTaskType"]);
             if (visualElements !== null && attrs["quantme:quantmeTaskType"] !== undefined) {
