@@ -165,18 +165,19 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             variablesToDisplay.push("optimizationLandscape");
         }
         for (let element of elementArray) {
-            console.log("get extensionElements");
-            console.log(element);
-            if (element.type === "bpmn:SubProcess" && diagramElement.id === element.id) {
-        
+
+            // handle on-demand subprocess extension elements for quantum view overlay
+            let onDemandSubprocessId = diagramElement.id + '_plane';
+            if (element.type === "bpmn:SubProcess" && onDemandSubprocessId === element.id) {
+
                 console.log("the subprocess extensionelements are:", element);
-                console.log(element);
-                console.log(diagramElement)
-                let extensionElementNames = element.businessObject.$attrs["opentosca:extension"].split(",");
-                console.log("extensionElementNames");
-                console.log(extensionElementNames);
-                variablesToDisplay = extensionElementNames
+                if (element.businessObject.$attrs["opentosca:extension"] !== undefined) {
+                    let extensionElementNames = element.businessObject.$attrs["opentosca:extension"].split(",");
+                    variablesToDisplay = extensionElementNames
+                }
             }
+
+            // extract extension elements from service task for overlay
             if (element.type === "bpmn:ServiceTask" && diagramElement.id === element.id) {
                 console.log("ids are matching")
                 let extensionElements = element.businessObject.extensionElements.values;
@@ -238,9 +239,9 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             console.log("----fileVariable")
             let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
             let value = await getVariableInstanceData(camundaAPI, processInstanceId, variableInstanceId);
-            if(value !== ""){
-            console.log(value);
-            variableText = variableText + '<strong>' + (`${fileVariable}</strong>:<br> <img class="quantum-view-picture" src="${value}" style="max-width: 100%;height: auto;"/>`)
+            if (value !== "") {
+                console.log(value);
+                variableText = variableText + '<strong>' + (`${fileVariable}</strong>:<br> <img class="quantum-view-picture" src="${value}" style="max-width: 100%;height: auto;"/>`)
             }
         }
 
