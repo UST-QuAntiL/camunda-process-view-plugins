@@ -224,6 +224,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
 
         let qProvText = '';
         let attributes = diagramElement.businessObject.$attrs;
+        console.log("The attributes are ", attributes);
         if (qprovEndpoint !== undefined && provider !== undefined) {
 
             let providerId = await getQProvProviderId(qprovEndpoint, provider);
@@ -236,32 +237,6 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                 console.log("QProv Data")
                 console.log(qprovData);
                 qProvText = generateOverlayText(qprovData);
-                if (attributes["quantme:containedElements"] !== undefined) {
-                    if (attributes["quantme:containedElements"].includes(diagramElement.id)) {
-
-                        // add overlay to the retrieved root element
-                        let entryPoint = quantmeElementRegistry.get(diagramElement.id);
-
-                        for (let child of entryPoint.children) {
-                            let childTop = child.y + child.height + 11;
-
-                            if (child.businessObject.$attrs['quantme:quantmeTaskType'] !== undefined) {
-                                if (child.businessObject.$attrs['quantme:quantmeTaskType'].startsWith("quantme")) {
-                                    const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
-                <div class="djs-overlay" data-overlay-id="ov-468528788-1" style="position: absolute; left: ${child.x}px; top: ${childTop}px; transform-origin: left top;">
-                    <div class="activity-bottom-left-position instances-overlay">
-                        <span class="badge instance-count" data-original-title="" title="">1</span>
-                        <span class="badge badge-important instance-incidents" style="display: none;"></span>
-                    </div>
-                </div>
-                <div class="data-overlay" style="position: absolute; left: ${child.x}px; top: ${childTop}px"><p>${qProvText}</p></div>
-            </div>`;
-                                    entryPoint.html = html;
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
 
@@ -272,7 +247,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             diagramElement.html = html;
         }
         if (attributes["quantme:quantmeTaskType"] !== undefined) {
-            if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumCircuitExecutionTask" && selectedQpu !== '') {
+            if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumHardwareSelectionSubprocess" && selectedQpu !== '') {
                 overlaySize = 10 * 20;
                 positionTop = overlayTop - (overlaySize / 2) - 10;
                 let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
