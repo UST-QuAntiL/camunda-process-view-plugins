@@ -22,7 +22,7 @@ import QuantMERenderer from './quantme/QuantMERenderer';
 
 /**
  * Determines the actual view and updates the displayed xml of the viewer.
- * 
+ *
  * @param viewer contains the xml
  * @param camundaAPI api to retrieve the variables and activities
  * @param processInstanceId identifies the running process instance
@@ -116,7 +116,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
     let variables = await getVariables(camundaAPI, processInstanceId);
 
     // extract qprov endpoint & provider
-    const qprovEndpoint = variables["QProvEndpoint"].value;
+    const qprovEndpoint = variables["QProvEndpoint"]?.value ?? variables["QPROV_ENDPOINT"]?.value;
     const provider = variables["provider"] !== undefined ? variables["provider"].value : undefined;
 
 
