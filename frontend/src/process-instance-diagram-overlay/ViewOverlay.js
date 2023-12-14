@@ -117,7 +117,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
 
     // extract qprov endpoint & provider
     const qprovEndpoint = variables["QProvEndpoint"].value;
-    const provider = variables["provider"] !== undefined ? variables["provider"].value : undefined;
+    const provider = variables["selected_provider"] !== undefined ? variables["selected_provider"].value : undefined;
 
 
     // the default qpu
