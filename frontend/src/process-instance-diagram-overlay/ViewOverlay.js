@@ -112,7 +112,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 * @param diagramElements contains the diagram elements to retrieve data
 */
 async function computeOverlay(camundaAPI, processInstanceId, diagramElements, elementArray, quantmeElementRegistry) {
-    console.log("Register overlay for diagram elements ", diagramElements);
+    console.log("Compute overlay for diagram elements ", diagramElements);
     let variables = await getVariables(camundaAPI, processInstanceId);
 
     // extract qprov endpoint & provider
@@ -134,7 +134,10 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         }
         return attrs !== undefined && attrs["quantme:quantmeTaskType"] !== undefined;
     });
+
+    console.log("filtered element to get attributes for: ", filteredDiagramElements)
     for (let diagramElement of filteredDiagramElements) {
+        console.log("diagram element to get attributes for: ", diagramElement)
         let attrs = quantmeElementRegistry.get(diagramElement.id);
         let top = diagramElement.y + diagramElement.height + 11;
         let x = diagramElement.x;
