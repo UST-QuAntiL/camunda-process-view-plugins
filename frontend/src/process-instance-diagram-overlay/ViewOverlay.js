@@ -19,7 +19,9 @@ import openTOSCAModdleExtension from './opentosca4bpmn.json';
 import quantMEModule from './quantme';
 import openTOSCAModule from './opentosca';
 import QuantMERenderer from './quantme/QuantMERenderer';
+import * as consts from './quantme/Constants';
 
+const quantMETaskType = "quantme:quantmeTaskType";
 /**
  * Determines the actual view and updates the displayed xml of the viewer.
  *
@@ -130,9 +132,9 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         let element = quantmeElementRegistry.get(diagramElement.id);
         let attrs = diagramElement.businessObject.$attrs;
         if (element !== undefined) {
-            return element.businessObject.$attrs !== undefined && element.businessObject.$attrs["quantme:quantmeTaskType"] !== undefined;
+            return element.businessObject.$attrs !== undefined && element.businessObject.$attrs[quantMETaskType] !== undefined;
         }
-        return attrs !== undefined && attrs["quantme:quantmeTaskType"] !== undefined;
+        return attrs !== undefined && attrs[quantMETaskType] !== undefined;
     });
 
     console.log("filtered element to get attributes for: ", filteredDiagramElements)
@@ -143,8 +145,8 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         let x = diagramElement.x;
         let overlayTop = diagramElement.y;
         let variablesToDisplay = [];
-        let type = quantmeDiagramElement.businessObject.$attrs["quantme:quantmeTaskType"];
-        if (type === "quantme:ParameterOptimizationTask") {
+        let type = quantmeDiagramElement.businessObject.$attrs[quantMETaskType];
+        if (type === consts.PARAMETER_OPTIMIZATION_TASK) {
             variablesToDisplay.push("optimizedParameters");
             variablesToDisplay.push("optimizationLandscape");
         }
@@ -244,76 +246,33 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             }
         }
 
-        const html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-            <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px"><p>${variableText}</p></div>
-            </div>`;
         if (variableText !== '<br><br>' && variableText !== '' && variableText !== '<br>') {
-            //diagramElement.html = html;
-            const hiddenDiv = document.createElement('div');
-            hiddenDiv.style.visibility = 'hidden';
-            hiddenDiv.style.position = 'absolute';
-            hiddenDiv.innerHTML = variableText;
-            document.body.appendChild(hiddenDiv);
-
-            // Get the height of the hidden div's content
-            const contentHeight = hiddenDiv.offsetHeight;
-
-            // Remove the hidden div from the document
-            document.body.removeChild(hiddenDiv);
-
-            // Set the overlaySize based on the measured height
-            const size = contentHeight + 50;
-            console.log("the calculated size is ", contentHeight);
-            console.log("the overlay size is ", overlaySize);
-
+        
             console.log("Variable text not empty set for", diagramElement)
-            let html2 = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-            <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px"><p>${variableText}</p></div>
+            let overlayHtml = `<div id="quantum-overlay" class="djs-overlays" style="position: absolute; display: flex;" data-container-id="${diagramElement.id}">
+            <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: 0px; display: flex;"><p>${variableText}</p></div>
             </div>`;
-            diagramElement.html = html2;
+            diagramElement.html = overlayHtml;
         }
-        if (attributes["quantme:quantmeTaskType"] !== undefined) {
-            if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumHardwareSelectionSubprocess" && selectedQpu !== '') {
-
-                //overlaySize = 10 * 20;
-                //positionTop = overlayTop - (overlaySize / 2) - 10;
-                const hiddenDiv = document.createElement('div');
-                hiddenDiv.style.visibility = 'hidden';
-                hiddenDiv.style.position = 'absolute';
-                hiddenDiv.innerHTML = qProvText;
-                document.body.appendChild(hiddenDiv);
-
-                // Get the height of the hidden div's content
-                const contentHeight = hiddenDiv.offsetHeight;
-
-                // Remove the hidden div from the document
-                document.body.removeChild(hiddenDiv);
-
-                // Set the overlaySize based on the measured height
-                const size = contentHeight + 50;
-                console.log("the calculated qprov text size is ", contentHeight);
-                console.log("the overlay size is ", overlaySize);
-                let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px">${qProvText}</p></div>
-                </div>`;
+        if (attributes[quantMETaskType] !== undefined) {
+            if (attributes[quantMETaskType] === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS && selectedQpu !== '') {
                 for (let i = 0; i < quantmeDiagramElement.children.length; i++) {
                     let child = quantmeDiagramElement.children[i];
-                    if (child.businessObject.$attrs["quantme:quantmeTaskType"] !== undefined) {
-                        let quantMeType = child.businessObject.$attrs["quantme:quantmeTaskType"];
-                        if (quantMeType === "quantme:QuantumCircuitExecutionTask") {
+                    if (child.businessObject.$attrs[quantMETaskType] !== undefined) {
+                        let quantMeType = child.businessObject.$attrs[quantMETaskType];
+                        if (quantMeType === consts.QUANTUM_CIRCUIT_EXECUTION_TASK) {
                             leftPosition = child.x - 25;
                             console.log("Top position ", positionTop);
 
                             positionTop = positionTop - 65;
                             console.log("Top position up ", positionTop)
-                            let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
-                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px">${qProvText}</p></div>
+                            let qProvOverlayHtml = `<div class="djs-overlays" style="position: absolute; display: flex;" data-container-id="${child.id}">
+                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: 0px; display: flex;">${qProvText}</p></div>
                 </div>`;
-                            child.html = exehtml;
+                            child.html = qProvOverlayHtml;
                         }
                     }
                 }
-                //diagramElement.html = exehtml;
                 console.log("QProv text not empty set for", diagramElement)
             }
         }
@@ -344,21 +303,21 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
             attrs = element.businessObject.$attrs;
         }
         if (attrs !== undefined) {
-            console.log("Currently handling overlay for task type ", attrs["quantme:quantmeTaskType"]);
-            if (visualElements !== null && attrs["quantme:quantmeTaskType"] !== undefined) {
+            console.log("Currently handling overlay for task type ", attrs[quantMETaskType]);
+            if (visualElements !== null && attrs[quantMETaskType] !== undefined) {
                 let addedHtml = diagramElement.html;
                 //let tempElement = document.createElement('div');
 
                 //tempElement.innerHTML = diagramElement.html;
                 console.log("add overlay to circuit execution task")
-                if (attrs["quantme:quantmeTaskType"] === "quantme:QuantumHardwareSelectionSubprocess") {
+                if (attrs[quantMETaskType] === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS) {
                     console.log("retrieve children")
                     for (let i = 0; i < element.children.length; i++) {
                         let child = element.children[i];
                         console.log("actual child ", child)
-                        if (child.businessObject.$attrs["quantme:quantmeTaskType"] !== undefined) {
-                            let quantMeType = child.businessObject.$attrs["quantme:quantmeTaskType"];
-                            if (quantMeType === "quantme:QuantumCircuitExecutionTask") {
+                        if (child.businessObject.$attrs[quantMETaskType] !== undefined) {
+                            let quantMeType = child.businessObject.$attrs[quantMETaskType];
+                            if (quantMeType === consts.QUANTUM_CIRCUIT_EXECUTION_TASK) {
                                 addedHtml = child.html;
 
                                 // update id to delete overlay
