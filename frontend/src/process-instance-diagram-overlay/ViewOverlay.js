@@ -189,6 +189,14 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             }
         }
 
+        // disable showing evaluatedCosts for result evaluation Task
+        const index = variablesToDisplay.indexOf("evaluatedCosts");
+        if (index > -1) { // only splice array when item is found
+            variablesToDisplay.splice(index, 1); // 2nd parameter means remove one item only
+        }
+
+
+
         // Generate the variable text for overlay
         let fileVariables = [];
         let variableText = variablesToDisplay.map(variableName => {
@@ -267,10 +275,9 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             console.log("the overlay size is ", overlaySize);
 
             console.log("Variable text not empty set for", diagramElement)
-            let html2 = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
+            diagramElement.html = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
             <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px"><p>${variableText}</p></div>
             </div>`;
-            diagramElement.html = html2;
         }
         if (attributes["quantme:quantmeTaskType"] !== undefined) {
             if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumHardwareSelectionSubprocess" && selectedQpu !== '') {
@@ -290,12 +297,12 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                 document.body.removeChild(hiddenDiv);
 
                 // Set the overlaySize based on the measured height
-                const size = contentHeight + 50;
+                const size = contentHeight + 10;
                 console.log("the calculated qprov text size is ", contentHeight);
                 console.log("the overlay size is ", overlaySize);
-                let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px">${qProvText}</p></div>
-                </div>`;
+                // let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
+                //     <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px">${qProvText}</p></div>
+                // </div>`;
                 for (let i = 0; i < quantmeDiagramElement.children.length; i++) {
                     let child = quantmeDiagramElement.children[i];
                     if (child.businessObject.$attrs["quantme:quantmeTaskType"] !== undefined) {
