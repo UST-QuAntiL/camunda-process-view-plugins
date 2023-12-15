@@ -220,7 +220,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                     }
                 }
             }
-        }).join('<br>');
+        }).join('<br/>');
 
         let overlaySize = variablesToDisplay.length * 120;
         let positionTop = overlayTop - 80;
@@ -232,7 +232,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             let value = await getVariableInstanceData(camundaAPI, variableInstanceId);
             if (value !== "") {
                 console.log(value);
-                variableText = variableText + '<strong>' + (`${fileVariable}</strong>:<br> <img class="quantum-view-picture" src="${value}" style="max-width: 100%;height: auto;"/>`)
+                variableText = variableText + '<strong>' + (`${fileVariable}</strong>:<br/> <img class="quantum-view-picture" src="${value}" style="max-width: 100%;height: auto;"/>`)
             }
         }
 
@@ -254,8 +254,8 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             }
         }
 
-        if (variableText !== '<br><br>' && variableText !== '' && variableText !== '<br>') {
-
+        if (variableText !== '<br/><br/>' && variableText !== '' && variableText !== '<br/>') {
+        
             console.log("Variable text not empty set for", diagramElement)
             let overlayHtml = `<div id="quantum-overlay" class="djs-overlays" style="position: absolute; display: flex;" data-container-id="${diagramElement.id}">
             <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: 0px; display: flex;"><p>${variableText}</p></div>
@@ -275,7 +275,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                             positionTop = positionTop - 65;
                             console.log("Top position up ", positionTop)
                             let qProvOverlayHtml = `<div class="djs-overlays" style="position: absolute; display: flex;" data-container-id="${child.id}">
-                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: 0px; display: flex;">${qProvText}</p></div>
+                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: 0px; display: flex;"><p>${qProvText}</p></div>
                 </div>`;
                             child.html = qProvOverlayHtml;
                         }
@@ -550,7 +550,7 @@ function generateOverlayText(obj) {
             }
             return `<strong>${variable}:</strong> ${value}`;
         })
-        .join('<br>');
+        .join('<br/>');
 
     return variableText;
 }
