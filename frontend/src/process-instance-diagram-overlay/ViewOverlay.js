@@ -375,15 +375,20 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
 
                                     // Check if the data-element-id matches the target value
                                     if (dataElementId === id && overlay !== null) {
+                                        console.log("Element data");
+                                        console.log(element)
+                                        console.log(element.y);
+                                        console.log(element.height);
                                         // Remove the matching child
                                         //child.removeChild(overlay);
                                         console.log("Child element overlay");
                                         console.log(overlay)
                                         console.log(overlay.offsetHeight);
-                                        let top = element.y-overlay.offsetHeight;
-                                        if(top > 0){
-                                            top = -top;
-                                        }
+                                        // from zero go to center of wf task element, then go to top of element, then go up by overlay size and afterwards add fixed value for overlayarrow on bottom of box
+                                        let top = element.y - element.height/2 -overlay.offsetHeight - 13;
+                                        // if(top > 0){
+                                        //     top = -top;
+                                        // }
                                         console.log("Das neue top ", top);
                                         overlay.style.top = `${top}px`;
                                         console.log(top);
