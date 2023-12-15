@@ -145,20 +145,11 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         let x = diagramElement.x;
         let overlayTop = diagramElement.y;
         let variablesToDisplay = [];
-        let quantMEType = quantmeDiagramElement.businessObject.$attrs[quantMETaskType];
-
-        // vars are pushed via external task - hence they are not included in input output
-        if (quantMEType === consts.PARAMETER_OPTIMIZATION_TASK) {
+        let type = quantmeDiagramElement.businessObject.$attrs[quantMETaskType];
+        if (type === consts.PARAMETER_OPTIMIZATION_TASK) {
             variablesToDisplay.push("optimizedParameters");
             variablesToDisplay.push("optimizationLandscape");
         }
-
-        //
-        if (quantMEType === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS) {
-            variablesToDisplay.push("executionProbabilityDistribution");
-        }
-
-
         for (let element of elementArray) {
 
             // handle on-demand subprocess extension elements for quantum view overlay
@@ -245,33 +236,34 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             }
         }
 
+        let qProvText = '';
+        let attributes = quantmeDiagramElement.businessObject.$attrs;
+        console.log("The attributes are ", attributes);
+        if (qprovEndpoint !== undefined && provider !== undefined) {
+
+            let providerId = await getQProvProviderId(qprovEndpoint, provider);
+            console.log("the response from QProv");
+            console.log(providerId);
 
 
-        console.log("The attributes are ", quantmeDiagramElement.businessObject.$attrs);
-
-        // get qprov qpu data for tasks that require it and append it to required vars
-        if (quantMEType !== undefined && taskTypeRequiresQProvQPUData(quantMEType)) {
-            let qProvText = '';
-            if (qprovEndpoint !== undefined && provider !== undefined) {
-
-                let providerId = await getQProvProviderId(qprovEndpoint, provider);
-                console.log("the response from QProv");
-                console.log(providerId);
-
-
-                if (selectedQpu !== '' && providerId) {
-                    let qprovData = await getQPUData(qprovEndpoint, providerId, selectedQpu);
-                    console.log("QProv Data")
-                    console.log(qprovData);
-                    qProvText = generateOverlayText(qprovData);
-                }
+            if (selectedQpu !== '' && providerId) {
+                let qprovData = await getQPUData(qprovEndpoint, providerId, selectedQpu);
+                console.log("QProv Data")
+                console.log(qprovData);
+                qProvText = generateOverlayText(qprovData);
             }
+        }
 
-            //append qprov data to variable string
-            if (quantMEType === consts.QUANTUM_CIRCUIT_EXECUTION_TASK){
-                variableText = variableText + '<br>' + qProvText
-            }
-            else if (quantMEType === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS && selectedQpu !== '') {
+        if (variableText !== '<br/><br/>' && variableText !== '' && variableText !== '<br/>') {
+
+            console.log("Variable text not empty set for", diagramElement)
+            let overlayHtml = `<div id="quantum-overlay" class="djs-overlays" style="position: absolute; display: flex;" data-container-id="${diagramElement.id}">
+            <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; display: flex;"><p>${variableText}</p></div>
+            </div>`;
+            diagramElement.html = overlayHtml;
+        }
+        if (attributes[quantMETaskType] !== undefined) {
+            if (attributes[quantMETaskType] === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS && selectedQpu !== '') {
                 for (let i = 0; i < quantmeDiagramElement.children.length; i++) {
                     let child = quantmeDiagramElement.children[i];
                     if (child.businessObject.$attrs[quantMETaskType] !== undefined) {
@@ -282,35 +274,20 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
 
                             positionTop = positionTop - 65;
                             console.log("Top position up ", positionTop)
-                            if (variableText !== '<br/><br/>' && variableText !== '' && variableText !== '<br/>'){
-                                qProvText = variableText + '<br>' + qProvText;
-                            }
-                            child.html = `<div class="djs-overlays" style="position: absolute; display: flex;" data-container-id="${child.id}">
-                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: 0px; display: flex;"><p>${qProvText}</p></div>
+                            let qProvOverlayHtml = `<div class="djs-overlays" style="position: absolute; display: flex;" data-container-id="${child.id}">
+                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; display: flex;"><p>${qProvText}</p></div>
                 </div>`;
+                            child.html = qProvOverlayHtml;
                         }
                     }
                 }
                 console.log("QProv text not empty set for", diagramElement)
             }
         }
-        else if (variableText !== '<br/><br/>' && variableText !== '' && variableText !== '<br/>') {
-
-            console.log("Variable text not empty set for", diagramElement)
-            diagramElement.html = `<div id="quantum-overlay" class="djs-overlays" style="position: absolute; display: flex;" data-container-id="${diagramElement.id}">
-            <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: 0px; display: flex;"><p>${variableText}</p></div>
-            </div>`;
-        }
     }
 
 }
 
-function taskTypeRequiresQProvQPUData(taskType) {
-    if (taskType === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS || taskType === consts.QUANTUM_CIRCUIT_EXECUTION_TASK){
-        return true;
-    }
-    return false
-}
 
 /**
 * Add event handling to diagram elements to display overlay
@@ -337,6 +314,7 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
             console.log("Currently handling overlay for task type ", attrs[quantMETaskType]);
             if (visualElements !== null && attrs[quantMETaskType] !== undefined) {
                 let addedHtml = diagramElement.html;
+
                 //let tempElement = document.createElement('div');
 
                 //tempElement.innerHTML = diagramElement.html;
@@ -353,6 +331,7 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
 
                                 // update id to delete overlay
                                 id = child.id;
+                                element = quantmeElementRegistry.get(child.id);
                                 visualElements = document.querySelector(`g.djs-element[data-element-id="${id}"]`);
                                 console.log("updated html for overlay")
                             }
@@ -364,6 +343,31 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
                     visualElements.addEventListener('mouseenter', function () {
                         if (!selectedElement.innerHTML.includes(addedHtml)) {
                             selectedElement.insertAdjacentHTML('beforeend', addedHtml);
+                            for (let i = 0; i < selectedElement.children.length; i++) {
+                                let child = selectedElement.children[i];
+    
+                                // Check if the child has the data-element-id attribute
+                                if (child.hasAttribute("data-container-id")) {
+                                    let dataElementId = child.getAttribute("data-container-id");
+                                    let overlay = child.querySelector('.data-overlay');
+    
+                                    // Check if the data-element-id matches the target value
+                                    if (dataElementId === id && overlay !== null) {
+                                        // Remove the matching child
+                                        //child.removeChild(overlay);
+                                        console.log("Child element overlay");
+                                        console.log(overlay)
+                                        console.log(overlay.offsetHeight);
+                                        let top = element.y-overlay.offsetHeight;
+                                        if(top > 0){
+                                            top = -top;
+                                        }
+                                        console.log("Das neue top ", top);
+                                        overlay.style.top = `${top}px`;
+                                        console.log(top);
+                                    }
+                                }
+                            }
                         }
                     });
                     visualElements.addEventListener('mouseleave', function () {
