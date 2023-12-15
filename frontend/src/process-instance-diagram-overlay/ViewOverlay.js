@@ -138,12 +138,12 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
     console.log("filtered element to get attributes for: ", filteredDiagramElements)
     for (let diagramElement of filteredDiagramElements) {
         console.log("diagram element to get attributes for: ", diagramElement)
-        let attrs = quantmeElementRegistry.get(diagramElement.id);
+        let quantmeDiagramElement = quantmeElementRegistry.get(diagramElement.id);
         let top = diagramElement.y + diagramElement.height + 11;
         let x = diagramElement.x;
-        let overlayTop = diagramElement.y - 150;
+        let overlayTop = diagramElement.y;
         let variablesToDisplay = [];
-        let type = diagramElement.businessObject.$attrs["quantme:quantmeTaskType"];
+        let type = quantmeDiagramElement.businessObject.$attrs["quantme:quantmeTaskType"];
         if (type === "quantme:ParameterOptimizationTask") {
             variablesToDisplay.push("optimizedParameters");
             variablesToDisplay.push("optimizationLandscape");
@@ -213,8 +213,10 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         }).join('<br>');
 
         let overlaySize = variablesToDisplay.length * 120;
-        let positionTop = overlayTop - (overlaySize / 2) - 70;
-        let leftPosition = diagramElement.x - 50;
+        let positionTop = overlayTop - 80;
+
+        // shift the overlay to the middle of the task
+        let leftPosition = quantmeDiagramElement.x - 50;
         for (let fileVariable of fileVariables) {
             console.log("----fileVariable")
             let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
@@ -226,7 +228,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         }
 
         let qProvText = '';
-        let attributes = diagramElement.businessObject.$attrs;
+        let attributes = quantmeDiagramElement.businessObject.$attrs;
         console.log("The attributes are ", attributes);
         if (qprovEndpoint !== undefined && provider !== undefined) {
 
@@ -247,16 +249,55 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px"><p>${variableText}</p></div>
             </div>`;
         if (variableText !== '<br><br>' && variableText !== '' && variableText !== '<br>') {
-            diagramElement.html = html;
+            //diagramElement.html = html;
+            const hiddenDiv = document.createElement('div');
+            hiddenDiv.style.visibility = 'hidden';
+            hiddenDiv.style.position = 'absolute';
+            hiddenDiv.innerHTML = variableText;
+            document.body.appendChild(hiddenDiv);
+
+            // Get the height of the hidden div's content
+            const contentHeight = hiddenDiv.offsetHeight;
+
+            // Remove the hidden div from the document
+            document.body.removeChild(hiddenDiv);
+
+            // Set the overlaySize based on the measured height
+            const size = contentHeight + 50;
+            console.log("the calculated size is ", contentHeight);
+            console.log("the overlay size is ", overlaySize);
+
+            console.log("Variable text not empty set for", diagramElement)
+            let html2 = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
+            <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px"><p>${variableText}</p></div>
+            </div>`;
+            diagramElement.html = html2;
         }
         if (attributes["quantme:quantmeTaskType"] !== undefined) {
             if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumHardwareSelectionSubprocess" && selectedQpu !== '') {
-                overlaySize = 10 * 20;
-                positionTop = overlayTop - (overlaySize / 2) - 10;
+                //overlaySize = 10 * 20;
+                //positionTop = overlayTop - (overlaySize / 2) - 10;
+                const hiddenDiv = document.createElement('div');
+                hiddenDiv.style.visibility = 'hidden';
+                hiddenDiv.style.position = 'absolute';
+                hiddenDiv.innerHTML = qProvText;
+                document.body.appendChild(hiddenDiv);
+
+                // Get the height of the hidden div's content
+                const contentHeight = hiddenDiv.offsetHeight;
+
+                // Remove the hidden div from the document
+                document.body.removeChild(hiddenDiv);
+
+                // Set the overlaySize based on the measured height
+                const size = contentHeight + 50;
+                console.log("the calculated qprov text size is ", contentHeight);
+                console.log("the overlay size is ", overlaySize);
                 let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
-                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${overlaySize}px">${qProvText}</p></div>
+                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px">${qProvText}</p></div>
                 </div>`;
                 diagramElement.html = exehtml;
+                console.log("QProv text not empty set for", diagramElement)
             }
         }
     }
@@ -276,6 +317,9 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
     for (let diagramElement of diagramElements) {
         let element = quantmeElementRegistry.get(diagramElement.id);
         let visualElements = document.querySelector(`g.djs-element[data-element-id="${diagramElement.id}"]`);
+        console.log("Register overlay for ");
+        console.log(element);
+        console.log(diagramElement);
 
         let attrs = diagramElement.businessObject.$attrs;
         if (element !== undefined) {
