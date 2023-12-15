@@ -215,8 +215,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         let overlaySize = variablesToDisplay.length * 120;
         let positionTop = overlayTop - 80;
 
-        // shift the overlay to the middle of the task
-        let leftPosition = quantmeDiagramElement.x - 50;
+        let leftPosition = quantmeDiagramElement.x - 25;
         for (let fileVariable of fileVariables) {
             console.log("----fileVariable")
             let variableInstanceId = await getVariableInstanceId(camundaAPI, processInstanceId, fileVariable);
@@ -275,6 +274,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         }
         if (attributes["quantme:quantmeTaskType"] !== undefined) {
             if (attributes["quantme:quantmeTaskType"] === "quantme:QuantumHardwareSelectionSubprocess" && selectedQpu !== '') {
+
                 //overlaySize = 10 * 20;
                 //positionTop = overlayTop - (overlaySize / 2) - 10;
                 const hiddenDiv = document.createElement('div');
@@ -296,7 +296,24 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
                 let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${diagramElement.id}">
                     <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px">${qProvText}</p></div>
                 </div>`;
-                diagramElement.html = exehtml;
+                for (let i = 0; i < quantmeDiagramElement.children.length; i++) {
+                    let child = quantmeDiagramElement.children[i];
+                    if (child.businessObject.$attrs["quantme:quantmeTaskType"] !== undefined) {
+                        let quantMeType = child.businessObject.$attrs["quantme:quantmeTaskType"];
+                        if (quantMeType === "quantme:QuantumCircuitExecutionTask") {
+                            leftPosition = child.x - 25;
+                            console.log("Top position ", positionTop);
+
+                            positionTop = positionTop - 65;
+                            console.log("Top position up ", positionTop)
+                            let exehtml = `<div class="djs-overlays" style="position: absolute;" data-container-id="${child.id}">
+                    <div class="data-overlay" style="position: absolute; left: ${leftPosition}px; top: ${positionTop}px; height: ${size}px">${qProvText}</p></div>
+                </div>`;
+                            child.html = exehtml;
+                        }
+                    }
+                }
+                //diagramElement.html = exehtml;
                 console.log("QProv text not empty set for", diagramElement)
             }
         }
@@ -317,6 +334,7 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
     for (let diagramElement of diagramElements) {
         let element = quantmeElementRegistry.get(diagramElement.id);
         let visualElements = document.querySelector(`g.djs-element[data-element-id="${diagramElement.id}"]`);
+        let id = diagramElement.id;
         console.log("Register overlay for ");
         console.log(element);
         console.log(diagramElement);
@@ -328,13 +346,34 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
         if (attrs !== undefined) {
             console.log("Currently handling overlay for task type ", attrs["quantme:quantmeTaskType"]);
             if (visualElements !== null && attrs["quantme:quantmeTaskType"] !== undefined) {
-                const addedHtml = diagramElement.html;
-                let tempElement = document.createElement('div');
-                tempElement.innerHTML = diagramElement.html;
-                if (addedHtml !== null && addedHtml !== undefined) {
+                let addedHtml = diagramElement.html;
+                //let tempElement = document.createElement('div');
+
+                //tempElement.innerHTML = diagramElement.html;
+                console.log("add overlay to circuit execution task")
+                if (attrs["quantme:quantmeTaskType"] === "quantme:QuantumHardwareSelectionSubprocess") {
+                    console.log("retrieve children")
+                    for (let i = 0; i < element.children.length; i++) {
+                        let child = element.children[i];
+                        console.log("actual child ", child)
+                        if (child.businessObject.$attrs["quantme:quantmeTaskType"] !== undefined) {
+                            let quantMeType = child.businessObject.$attrs["quantme:quantmeTaskType"];
+                            if (quantMeType === "quantme:QuantumCircuitExecutionTask") {
+                                addedHtml = child.html;
+
+                                // update id to delete overlay
+                                id = child.id;
+                                visualElements = document.querySelector(`g.djs-element[data-element-id="${id}"]`);
+                                console.log("updated html for overlay")
+                            }
+                        }
+                    }
+                }
+
+                if (addedHtml !== null && addedHtml !== undefined && visualElements !== null) {
                     visualElements.addEventListener('mouseenter', function () {
                         if (!selectedElement.innerHTML.includes(addedHtml)) {
-                            selectedElement.insertAdjacentHTML('beforeend', diagramElement.html);
+                            selectedElement.insertAdjacentHTML('beforeend', addedHtml);
                         }
                     });
                     visualElements.addEventListener('mouseleave', function () {
@@ -348,7 +387,7 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
                                 let overlay = child.querySelector('.data-overlay');
 
                                 // Check if the data-element-id matches the target value
-                                if (dataElementId === diagramElement.id && overlay !== null) {
+                                if (dataElementId === id && overlay !== null) {
                                     // Remove the matching child
                                     child.removeChild(overlay);
                                     console.log("Child element removed successfully.");
