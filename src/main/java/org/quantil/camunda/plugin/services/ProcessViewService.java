@@ -73,9 +73,11 @@ public class ProcessViewService {
 
         // order list to get next view in the row
         List<String> orderedResources = new ArrayList<>();
-
         // add BPMN file as initial view and sort remaining views using the resource names
         List<String> resourceNames = new ArrayList<>(resources.values());
+
+        // remove html forms 
+        resourceNames.removeIf(resourceName -> resourceName.endsWith(".html"));
         String initialView =
                 resourceNames.stream().filter(resourceName -> resourceName.endsWith(".bpmn")).findFirst().orElseThrow(NoSuchElementException::new);
         orderedResources.add(initialView);
