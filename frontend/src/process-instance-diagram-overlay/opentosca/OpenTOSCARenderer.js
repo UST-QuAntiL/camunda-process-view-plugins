@@ -218,7 +218,7 @@ export default class OpenTOSCARenderer {
     let onDemand = element.businessObject.get('opentosca:onDemandDeployment');
     console.log(onDemand);
     console.log(deploymentModelUrl);
-    if (!deploymentModelUrl || onDemand !== "true") return;
+    if (!deploymentModelUrl) return;
 
     let groupDef = svgCreate('g');
     svgAppend(parentGfx, svgCreate("path", {

@@ -250,7 +250,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
         console.log("The attributes are ", quantmeDiagramElement.businessObject.$attrs);
 
         // get qprov qpu data for tasks that require it and append it to required vars
-        if (quantMEType !== undefined && taskTypeRequiresQProvQPUData(quantMEType)) {
+        if (quantMEType !== undefined && taskTypeRequiresQProvQPUData(quantMEType) && selectedQpu !== "") {
             let qProvText = '';
             if (qprovEndpoint !== undefined && provider !== undefined) {
 

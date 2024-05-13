@@ -34,11 +34,40 @@ export async function addSubprocessToggleButton(viewer, options, { control }) {
     let variables = await getVariables("", extractedValue);
 
     const update = (showSubProcesses) => {
-        const subProcesses = [];
+        let getAllTasks = [];
+
+        function retrieveTasksFromSubprocesses(activity){
+            let children = activity.children
+            if (children){
+                for (let child of children){
+                    retrieveTasksFromSubprocesses(child);
+                }
+            }
+            if (activity.type === "bpmn:ServiceTask") {
+                getAllTasks.push(activity)
+            }
+        }
+        console.log("Retrieve all tasks for deployment models")
+        retrieveTasksFromSubprocesses(canvas.getRootElement())
+
+        for(let task of getAllTasks) {
+            let qProvUrl = task.id + "_qProvUrl";
+            if (variables.hasOwnProperty(qProvUrl)) {
+                let value = variables[qProvUrl].value;
+                task.businessObject.$attrs.qProvUrl = value;
+            }
+            let completeModelUrl = "completeModelUrl_" + task.id;
+            if (variables.hasOwnProperty(completeModelUrl)) {
+                let value = variables[completeModelUrl].value + '?csar';
+                task.businessObject.$attrs["opentosca:deploymentModelUrl"]  = value;
+            }
+        }
+
+
         const tasks = [];
         const findSubprocesses = (element) => {
             if (element.businessObject.get('opentosca:deploymentModelUrl')) {
-                subProcesses.push(element);
+                tasks.push(element);
             }
             if (element.type === "bpmn:SubProcess") {
                 if (!element.collapsed) {
@@ -46,46 +75,35 @@ export async function addSubprocessToggleButton(viewer, options, { control }) {
                 }
             }
         }
+
         let children = canvas.getRootElement().children;
         children.forEach(findSubprocesses);
-        for(let child of children) {
-            let qProvUrl = child.id + "_qProvUrl";
-            if (variables.hasOwnProperty(qProvUrl)) {
-                let value = variables[qProvUrl].value;
-                child.businessObject.$attrs.qProvUrl = value;
-            }
-            let completeModelUrl = "completeModelUrl_" + child.id;
-            if (variables.hasOwnProperty(completeModelUrl)) {
-                let value = variables[completeModelUrl].value + '?csar';
-                child.businessObject.$attrs["opentosca:deploymentModelUrl"]  = value;
-            }
-        }
-        for (const subProcess of subProcesses) {
+        for (const task of tasks) {
             const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask";
             console.log(showSubProcesses)
             let elementRegistry = viewer.get("elementRegistry");
             let context = {};
-            context.element = subProcess;
-            context.gfx = elementRegistry.getGraphics(subProcess);
+            context.element = task;
+            context.gfx = elementRegistry.getGraphics(task);
             context.show = showSubProcesses;
             console.log("fire");
             console.log(showSubProcesses);
             eventBus.fire("render.shape", context)
 
             // only change shape if it is a valid deployment model and onDemand
-            if (subProcess.type !== newType //&& !subProcess.businessObject.get('opentosca:deploymentModelUrl').includes("wineryEndpoint")
+            if (task.type !== newType //&& !subProcess.businessObject.get('opentosca:deploymentModelUrl').includes("wineryEndpoint")
             ) {
                 //eventBus.fire("render.shape", context)
                 // trigger the render shape event
-                if (subProcess.businessObject.get('opentosca:onDemandDeployment') === "true") {
-                    canvas.removeShape(subProcess);
-                    subProcess.type = newType;
-                    canvas.addShape(subProcess);
+                if (task.businessObject.get('opentosca:onDemandDeployment') === "true") {
+                    canvas.removeShape(task);
+                    task.type = newType;
+                    canvas.addShape(task);
                 } else {
                     //if (showSubProcesses) {
                         console.log("removeShape");
-                        
-                       
+
+
                         //eventBus.fire("render.shape", context)
                         //canvas.removeShape(subProcess);
                         //canvas.addShape(subProcess);
@@ -93,7 +111,7 @@ export async function addSubprocessToggleButton(viewer, options, { control }) {
                 }
 
                 if (showSubProcesses) {
-                    drilldownOverlayBehavior.addOverlay(subProcess);
+                    drilldownOverlayBehavior.addOverlay(task);
                 }
             }
         }
@@ -121,3 +139,5 @@ async function getVariables(camundaAPI, processInstanceId) {
     )
     return (await res.json());
 }
+
+

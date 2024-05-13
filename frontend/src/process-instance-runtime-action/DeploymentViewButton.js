@@ -59,6 +59,7 @@ function DeploymentViewButton({camundaAPI, processInstanceId, viewer}) {
         .filter(element => element.type === "bpmn:SubProcess" && element.collapsed)
     const update = () => {
         for (const subProcess of subProcesses) {
+            console.log("deploymentviewbutton root element log")
             if (subProcess.parent !== canvas.getRootElement()) continue;
             const newType = showSubProcesses ? "bpmn:SubProcess" : "bpmn:ServiceTask"
             if (subProcess.type !== newType) {
