@@ -93,26 +93,12 @@ export async function addSubprocessToggleButton(viewer, options, { control }) {
             // only change shape if it is a valid deployment model and onDemand
             if (task.type !== newType //&& !subProcess.businessObject.get('opentosca:deploymentModelUrl').includes("wineryEndpoint")
             ) {
-                //eventBus.fire("render.shape", context)
                 // trigger the render shape event
                 if (task.businessObject.get('opentosca:onDemandDeployment') === "true") {
                     canvas.removeShape(task);
                     task.type = newType;
                     canvas.addShape(task);
-                } else {
-                    //if (showSubProcesses) {
-                        console.log("removeShape");
-
-
-                        //eventBus.fire("render.shape", context)
-                        //canvas.removeShape(subProcess);
-                        //canvas.addShape(subProcess);
-                    //}
-                }
-
-                if (showSubProcesses) {
-                    drilldownOverlayBehavior.addOverlay(task);
-                }
+                } 
             }
         }
     }

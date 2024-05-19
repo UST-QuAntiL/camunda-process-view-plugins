@@ -170,7 +170,6 @@ export default class OpenTOSCARenderer {
       if (element.type === SERVICE_TASK_TYPE) {
         if (type === 'render.shape') {
           let task = bpmnRenderer.drawShape(parentGfx, element);
-          //this.addSubprocessView(parentGfx, element, bpmnRenderer);
           this.showDeploymentModel(parentGfx, element, show);
           return task;
         }
@@ -639,16 +638,15 @@ export default class OpenTOSCARenderer {
     console.log(element)
     console.log(element.showDeploymentModel)
     if (element.showDeploymentModel) {
-      this.showDeploymentModel(parentGfx, element);
+      this.createDeploymentModel(parentGfx, element);
     } else {
-      console.log("remove deploymentmodel")
+      console.log("remove deployment model")
       this.removeDeploymentModel(parentGfx, element);
     }
   }
 
   async showDeploymentModel(parentGfx, element, show) {
     let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
-    let qprovEndpoint = element.businessObject.get("qProvUrl");
     if (!deploymentModelUrl || deploymentModelUrl.includes('wineryEndpoint')) return;
     const button = drawTaskSVG(parentGfx, {
       transform: 'matrix(0.3, 0, 0, 0.3, 85, 65)',
@@ -656,90 +654,20 @@ export default class OpenTOSCARenderer {
     }, null, true);
     button.style['pointer-events'] = 'all';
     button.style['cursor'] = 'pointer';
+    this.removeDeploymentModel(parentGfx, element);
     button.addEventListener('click', (e) => {
       e.preventDefault();
       console.log("click")
       element.deploymentModelTopology = undefined;
-      console.log(show)
       element.showDeploymentModel = !element.showDeploymentModel;
       console.log(element)
       this.showOrDeleteDeploymentModel(parentGfx, element);
     });
 
-    const groupDef = svgCreate("g", { id: DEPLOYMENT_GROUP_ID });
-    parentGfx.prepend(groupDef);
-
-    const { topNode, nodeTemplates, relationshipTemplates } =
-      await loadTopology(deploymentModelUrl);
-
-
-    let ySubtract = parseInt(topNode.y);
-    let xSubtract = parseInt(topNode.x);
-    let xMin = 0;
-    let xMax = 0;
-    let yMax = 0;
-
-
-    const positions = new Map();
-    for (let nodeTemplate of nodeTemplates) {
-      console.log("NODETEMPLATE")
-      console.log(nodeTemplate)
-
-
-      const position = {
-        x: (parseInt(nodeTemplate.x) - xSubtract) / 1.4,
-        y: (parseInt(nodeTemplate.y) - ySubtract) / 1.4,
-      };
-
-      if (position.x < xMin) {
-        xMin = position.x;
-      }
-      if (position.x > xMax) {
-        xMax = position.x;
-      }
-      if (position.y > yMax) {
-        yMax = position.y;
-      }
-      positions.set(nodeTemplate.id, position);
-      if (nodeTemplate.id !== topNode.id) {
-        this.drawNodeTemplate(groupDef, nodeTemplate, position, element);
-        const namePattern = /\}(.*)/g;
-        const typeMatches = namePattern.exec(nodeTemplate.type);
-        let typeName;
-        if (typeMatches === null || typeMatches.length === 0) {
-          typeName = nodeTemplate.type;
-        } else {
-          typeName = typeMatches[1];
-        }
-        console.log(typeName)
-
-      }
-
+    if (show) {
+      element.showDeploymentModel = true;
+      this.createDeploymentModel(parentGfx, element)
     }
-    const boundingBox = {
-      left: Math.min(...[...positions.values()].map((p) => p.x)) + element.x,
-      top: Math.min(...[...positions.values()].map((p) => p.y)) + element.y,
-      right:
-        Math.max(...[...positions.values()].map((p) => p.x)) +
-        NODE_WIDTH +
-        element.x,
-      bottom:
-        Math.max(...[...positions.values()].map((p) => p.y)) +
-        NODE_HEIGHT +
-        element.y,
-    };
-
-    this.currentlyShownDeploymentsModels.set(element.id, {
-      boundingBox,
-    });
-
-    this.drawNodeConnections(
-      groupDef,
-      topNode,
-      relationshipTemplates,
-      positions
-    );
-    this.drawTopologyOverlay(groupDef, xMin - NODE_SHIFT_MARGIN / 2, xMax + NODE_WIDTH + NODE_SHIFT_MARGIN / 2, yMax + NODE_HEIGHT + NODE_SHIFT_MARGIN / 2);
   }
 
   drawTopologyOverlay(parentGfx, xMin, xMax, yMax) {
@@ -986,35 +914,119 @@ export default class OpenTOSCARenderer {
     }
   }
 
-  removeDeploymentModel(parentGfx, element) {
-    console.log("remove")
-    console.log(this.currentlyShownDeploymentsModels)
-    console.log(element.id)
-    this.currentlyShownDeploymentsModels.delete(element.id);
-    const group = svgSelect(parentGfx, "#" + DEPLOYMENT_GROUP_ID);
-    console.log(group)
-    if (group) {
-      let visualElements = document.querySelector(`g.djs-element[data-element-id="${element.id}"]`);
-      if (visualElements && visualElements.children.length > 0) {
-        let firstChild = visualElements.children[0];
-        let childrenOfFirstChild = firstChild.children;
-        let childrenOfFirstChildArray = Array.from(childrenOfFirstChild);
-        //childrenOfFirstChild.parentNode.removeChild(element);
-        console.log(childrenOfFirstChildArray);
-        for (let i = 0; i < childrenOfFirstChild.length; i++) {
-          let child = childrenOfFirstChild[i];
-          if (child.id === "deployment") {
-            // Remove the child
-            child.parentNode.removeChild(child);
-            i--;
-          }
+  async createDeploymentModel(parentGfx, element) {
+    let deploymentModelUrl = element.businessObject.get('opentosca:deploymentModelUrl');
+    const groupDef = svgCreate("g", { id: DEPLOYMENT_GROUP_ID });
+    parentGfx.prepend(groupDef);
+
+    const { topNode, nodeTemplates, relationshipTemplates } =
+      await loadTopology(deploymentModelUrl);
+
+
+    let ySubtract = parseInt(topNode.y);
+    let xSubtract = parseInt(topNode.x);
+    let xMin = 0;
+    let xMax = 0;
+    let yMax = 0;
+
+
+    const positions = new Map();
+    for (let nodeTemplate of nodeTemplates) {
+      console.log("NODETEMPLATE")
+      console.log(nodeTemplate)
+
+
+      const position = {
+        x: (parseInt(nodeTemplate.x) - xSubtract) / 1.4,
+        y: (parseInt(nodeTemplate.y) - ySubtract) / 1.4,
+      };
+
+      if (position.x < xMin) {
+        xMin = position.x;
+      }
+      if (position.x > xMax) {
+        xMax = position.x;
+      }
+      if (position.y > yMax) {
+        yMax = position.y;
+      }
+      positions.set(nodeTemplate.id, position);
+      if (nodeTemplate.id !== topNode.id) {
+        this.drawNodeTemplate(groupDef, nodeTemplate, position, element);
+        const namePattern = /\}(.*)/g;
+        const typeMatches = namePattern.exec(nodeTemplate.type);
+        let typeName;
+        if (typeMatches === null || typeMatches.length === 0) {
+          typeName = nodeTemplate.type;
+        } else {
+          typeName = typeMatches[1];
         }
-        console.log("remove group")
-        group.remove();
-      } else {
-        console.error("No visual elements found or the first element has no children.");
+        console.log(typeName)
+
       }
 
+    }
+    const boundingBox = {
+      left: Math.min(...[...positions.values()].map((p) => p.x)) + element.x,
+      top: Math.min(...[...positions.values()].map((p) => p.y)) + element.y,
+      right:
+        Math.max(...[...positions.values()].map((p) => p.x)) +
+        NODE_WIDTH +
+        element.x,
+      bottom:
+        Math.max(...[...positions.values()].map((p) => p.y)) +
+        NODE_HEIGHT +
+        element.y,
+    };
+
+    this.currentlyShownDeploymentsModels.set(element.id, {
+      boundingBox,
+    });
+
+    this.drawNodeConnections(
+      groupDef,
+      topNode,
+      relationshipTemplates,
+      positions
+    );
+    this.drawTopologyOverlay(groupDef, xMin - NODE_SHIFT_MARGIN / 2, xMax + NODE_WIDTH + NODE_SHIFT_MARGIN / 2, yMax + NODE_HEIGHT + NODE_SHIFT_MARGIN / 2);
+
+  }
+
+  removeDeploymentModel(parentGfx, element) {
+    console.log("remove")
+    console.log(this.currentlyShownDeploymentsModels.get(element.id))
+    console.log(element.id)
+    this.currentlyShownDeploymentsModels.delete(element.id);
+    const groups = svgSelectAll(parentGfx, "#" + DEPLOYMENT_GROUP_ID);
+    console.log("deployment groups")
+    console.log(groups)
+
+    if (groups && groups.length > 0) {
+      groups.forEach((group) => {
+        let visualElements = document.querySelector(`g.djs-element[data-element-id="${element.id}"]`);
+        if (visualElements && visualElements.children.length > 0) {
+          let firstChild = visualElements.children[0];
+          let childrenOfFirstChild = firstChild.children;
+          let childrenOfFirstChildArray = Array.from(childrenOfFirstChild);
+
+          console.log(childrenOfFirstChildArray);
+          for (let i = 0; i < childrenOfFirstChild.length; i++) {
+            let child = childrenOfFirstChild[i];
+            if (child.id === "deployment") {
+              // Remove the child
+              child.parentNode.removeChild(child);
+              i--;
+            }
+          }
+          console.log("remove group");
+          group.remove();
+        } else {
+          console.error("No visual elements found or the first element has no children.");
+        }
+      });
+    } else {
+      console.error("No groups found.");
     }
   }
 
@@ -1042,7 +1054,7 @@ export default class OpenTOSCARenderer {
       align: "center-middle",
       style: {
         fill: "black",
-        "pointer-events":"none"
+        "pointer-events": "none"
       },
     });
 
@@ -1073,7 +1085,7 @@ export default class OpenTOSCARenderer {
       align: "center-middle",
       style: {
         fill: "#777777",
-        "pointer-events":"none",
+        "pointer-events": "none",
       },
     });
 
@@ -1121,7 +1133,7 @@ export default class OpenTOSCARenderer {
 
           text.id = element.id + "_task" + i;
           console.log("update qprov attribute: ", text)
-          text.children[0].setAttribute('y', 2 + (i+1)*12);
+          text.children[0].setAttribute('y', 2 + (i + 1) * 12);
           text.children[0].setAttribute('x', 5);
           i++;
           height = height + VERTICAL_SPACING;
@@ -1213,4 +1225,9 @@ export default class OpenTOSCARenderer {
     }
     return super.drawShape(parentNode, element);
   }
+
+}
+
+function svgSelectAll(parent, selector) {
+  return parent.querySelectorAll(selector);
 }
