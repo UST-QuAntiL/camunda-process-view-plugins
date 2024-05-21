@@ -29,12 +29,12 @@ camunda.bpm:
 ## Run using Docker
 Build the docker image:
 ```sh
-docker build -t camunda-deployment-view-plugin .
+docker build -t camunda-deployment-view-plugins .
 ```
 
 Run the docker image:
 ```sh
-docker run -p 8080:8080 camunda-deployment-view-plugin
+docker run -p 8080:8080 camunda-deployment-view-plugins
 ```
 
 ## Disclaimer of Warranty
