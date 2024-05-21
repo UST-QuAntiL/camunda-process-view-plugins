@@ -1,4 +1,4 @@
-# camunda-process-views-plugin
+# camunda-process-view-plugins
 
 [![Test on Ubuntu](https://github.com/UST-QuAntiL/camunda-process-views-plugin/actions/workflows/test.yml/badge.svg)](https://github.com/UST-QuAntiL/camunda-process-views-plugin/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
