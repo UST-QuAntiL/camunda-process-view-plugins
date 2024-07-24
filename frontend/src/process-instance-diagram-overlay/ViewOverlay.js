@@ -102,7 +102,7 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 
     // visualize process token for retrieved active activities
     activeActivity.forEach(activeActivity =>
-        visualizeActiveActivities(activeActivity['activityId'], quantmeElementRegistry, viewerElementRegistry));
+    visualizeActiveActivities(activeActivity['activityId'], quantmeElementRegistry, viewerElementRegistry));
 
     await computeOverlay(camundaAPI, processInstanceId, quantmeElementArray, allElements, quantmeElementRegistry);
     registerOverlay(quantmeElementArray, quantmeElementRegistry);
@@ -441,8 +441,34 @@ async function getActiveActivities(camundaAPI, processInstanceId) {
             }
         }
     )
-    return (await res.json())['childActivityInstances'];
+    let response = await res.json();
+    let activeActivities = collectActivityInstances(response['childActivityInstances'][0]);
+    console.log("The active activities are ", activeActivities);
 
+    return activeActivities;
+
+}
+
+/**
+ * Recursively determine the active instances.
+ * @param activityInstance 
+ * @returns the active activity instances
+ */
+function collectActivityInstances(activityInstance) {
+    // Initialize an array to hold all activity instances
+    let allInstances = [];
+
+    // Add the current activity instance to the array
+    allInstances.push(activityInstance);
+    console.log("the current activity instance ", activityInstance);
+    // Recursively collect child activity instances
+    if (activityInstance.childActivityInstances && activityInstance.childActivityInstances.length > 0) {
+        for (let child of activityInstance.childActivityInstances) {
+            allInstances = allInstances.concat(collectActivityInstances(child));
+        }
+    }
+
+    return allInstances;
 }
 
 /**
@@ -652,8 +678,8 @@ async function visualizeActiveActivities(activeActivityId, quantmeElementRegistr
         selectedElement.insertAdjacentHTML('beforeend', overlayHtml);
     }
 
-    // set the token on the task of the subprocess
-    if (activeActivityAttributes['quantme:containedElements'] !== undefined) {
+    // set the token on the task of the hardware selection subprocess
+    if (activeActivityAttributes['quantme:containedElements'] !== undefined && activeActivityAttributes['quantme:quantmeTaskType'] === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS) {
         let subProcess = quantmeElementRegistry.get(activeActivityId);
 
         // currently the subprocess contains exactly one quantme task
