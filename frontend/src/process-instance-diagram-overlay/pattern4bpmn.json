@@ -1,0 +1,118 @@
+{
+  "name": "Pattern",
+  "uri": "https://github.com/UST-QuAntiL/Pattern",
+  "prefix": "pattern",
+  "xml": {
+    "tagAlias": "lowerCase"
+  },
+  "types": [
+    {
+      "name": "QuantumKernelEstimator",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "AlternatingOperatorAnsatz",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "QuantumApproximateOptimizationAlgorithm",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "QuantumPhaseEstimation",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "VariationalQuantumAlgorithm",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "VariationalQuantumEigensolver",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "OrchestratedExecution",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "PredeployedExecution",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "PrioritizedExecution",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "ErrorCorrection",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "GateErrorMitigation",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "ReadoutErrorMitigation",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "WarmStart",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "BiasedInitialState",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "ChainedOptimization",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "VariationalParameterTransfer",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "PreTrainedFeatureExtractor",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "CircuitCutting",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "QuantumHardwareSelection",
+      "superClass": ["pattern:Pattern"],
+      "properties": []
+    },
+    {
+      "name": "Pattern",
+      "superClass": ["bpmn:BoundaryEvent"],
+      "properties": [
+        {
+          "name": "patternId",
+          "isAttr": true,
+          "type": "String"
+        }
+      ]
+    }
+  ],
+  "enumerations": [],
+  "associations": []
+}
