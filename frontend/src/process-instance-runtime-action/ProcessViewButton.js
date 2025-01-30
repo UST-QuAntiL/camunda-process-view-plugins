@@ -105,11 +105,14 @@ function ProcessViewButton({ camundaAPI, processInstanceId }) {
 
     return (
         <>
+            <button id="pattern-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Pattern View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
+                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/UST-QuAntiL/camunda-process-view-plugins/refs/heads/main/frontend/resources/pattern-icon.png" />
+            </button>
             <button id="quantum-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Quantum View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
-                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/LaviniaStiliadou/camunda-process-views-plugin/main/frontend/resources/QuantumViewIcon.svg" />
+                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/UST-QuAntiL/camunda-process-view-plugins/refs/heads/main/frontend/resources/QuantumViewIcon.svg" />
             </button>
             <button id="deployment-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Deployment View" onClick={() => { triggerDeployment() }} tooltip-placement="left">
-                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/LaviniaStiliadou/camunda-process-views-plugin/main/frontend/resources/DeploymentViewIcon.svg" />
+                <img class="process-view-button-picture" src="https://raw.githubusercontent.com/UST-QuAntiL/camunda-process-view-plugins/refs/heads/main/frontend/resources/DeploymentViewIcon.svg" />
             </button>
         </>
     );

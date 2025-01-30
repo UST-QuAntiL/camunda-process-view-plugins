@@ -9,11 +9,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import QuantMERenderer from './QuantMERenderer';
+import CustomRenderer from './CustomRenderer';
 import QuantMEPathMap from './QuantMEPathMap';
 
 export default {
-  __init__: ['quantMERenderer', 'quantMEPathMap'],
-  quantMERenderer: ['type', QuantMERenderer],
+  __init__: ['customRenderer', 'quantMEPathMap'],
+  customRenderer: ['type', CustomRenderer],
   quantMEPathMap: ['type', QuantMEPathMap],
 };

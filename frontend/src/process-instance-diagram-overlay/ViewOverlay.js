@@ -16,9 +16,11 @@ import BpmnModeler from 'bpmn-js/lib/Modeler';
 import camundaModdlePackage from 'camunda-bpmn-moddle/resources/camunda';
 import quantMEModdleExtension from './quantum4bpmn.json';
 import openTOSCAModdleExtension from './opentosca4bpmn.json';
+import patternModdleExtension from './pattern4bpmn.json';
 import quantMEModule from './quantme';
 import openTOSCAModule from './opentosca';
-import QuantMERenderer from './quantme/QuantMERenderer';
+import patternModule from './quantme/pattern';
+import CustomRenderer from './quantme/CustomRenderer';
 import * as consts from './quantme/Constants';
 
 const quantMETaskType = "quantme:quantmeTaskType";
@@ -52,60 +54,64 @@ export async function renderOverlay(viewer, camundaAPI, processInstanceId) {
 
     let allElements = viewerElementRegistry.getAll();
 
-    if (!activeView.includes('view-before-rewriting')) {
+    if (activeView.includes('view-with-patterns') || activeView.includes('view-before-rewriting')) {
+
+        elementArray = elementArray.filter(element => element.type === 'bpmn:Process');
+        console.log('Found ' + elementArray.length + ' flow elements of type "bpmn:Process"!');
+
+        if (elementArray.length === 0) {
+            console.error('Unable to find element of type "bpmn:Process" to add overlay. Aborting!');
+            return;
+        }
+        let rootElement = elementArray[0];
+        console.log('Creating overlay based on root element: ', rootElement)
+
+        // add overlay to remove existing elements from the diagram
+        console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
+
+        viewerElementRegistry = viewer.get("elementRegistry")
+        let quantmeElementArray = viewerElementRegistry.getAll();
+        console.log('Diagram contains the following elements: ', elementArray);
+
+        // create modeler capable of understanding the QuantME modeling constructs
+        let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
+        console.log('Successfully created custom modeler to visualize custom constructs in process views: ', quantmeModeler);
+        let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
+        quantmeElementArray = viewerElementRegistry.getAll();
+
+        // get the xml of the modeler and update the view
+        viewer.importXML(activeViewXml);
+        overlays = viewer.get("overlays");
+
+        // register the events and rendering
+        new CustomRenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
+        quantmeElementRegistry = quantmeModeler.get('elementRegistry');
+        quantmeElementArray = viewerElementRegistry.getAll();
+        console.log("all elements are: ", quantmeElementArray);
+
+        // get the currently active activities for the process instance
+        let activeActivity = await getActiveActivities(camundaAPI, processInstanceId);
+        console.log('Currently active activities to visualize: ', activeActivity);
+
+        // if the workflow contains loops, transition activities can hold the active activity
+        if (activeActivity.length === 0) {
+            activeActivity = await getActiveTransitionActivities(camundaAPI, processInstanceId);
+        }
+        console.log('Currently active transition activities to visualize: ', activeActivity);
+
+        // visualize process token for retrieved active activities
+        activeActivity.forEach(activeActivity =>
+            visualizeActiveActivities(activeActivity['activityId'], quantmeElementRegistry, viewerElementRegistry));
+
+        
+        if (activeView.includes('view-before-rewriting')) {
+            await computeOverlay(camundaAPI, processInstanceId, quantmeElementArray, allElements, quantmeElementRegistry);
+            registerOverlay(quantmeElementArray, quantmeElementRegistry);
+        }
+    } else {
         console.log("Current view equals executed workflow. No overlay required!");
         return;
     }
-
-    elementArray = elementArray.filter(element => element.type === 'bpmn:Process');
-    console.log('Found ' + elementArray.length + ' flow elements of type "bpmn:Process"!');
-
-    if (elementArray.length === 0) {
-        console.error('Unable to find element of type "bpmn:Process" to add overlay. Aborting!');
-        return;
-    }
-    let rootElement = elementArray[0];
-    console.log('Creating overlay based on root element: ', rootElement)
-
-    // add overlay to remove existing elements from the diagram
-    console.log("View to generate overlay for is represented by the following XML: ", activeViewXml);
-
-    viewerElementRegistry = viewer.get("elementRegistry")
-    let quantmeElementArray = viewerElementRegistry.getAll();
-    console.log('Diagram contains the following elements: ', elementArray);
-
-    // create modeler capable of understanding the QuantME modeling constructs
-    let quantmeModeler = await createQuantmeModelerFromXml(activeViewXml);
-    console.log('Successfully created QuantME modeler to visualize QuantME constructs in process views: ', quantmeModeler);
-    let quantmeElementRegistry = quantmeModeler.get('elementRegistry');
-    quantmeElementArray = viewerElementRegistry.getAll();
-
-    // get the xml of the modeler and update the view
-    viewer.importXML(activeViewXml);
-    overlays = viewer.get("overlays");
-
-    // register the events and rendering
-    new QuantMERenderer(viewer.get("eventBus"), viewer.get("styles"), viewer.get("bpmnRenderer"), viewer.get("textRenderer"), canvas);
-    quantmeElementRegistry = quantmeModeler.get('elementRegistry');
-    quantmeElementArray = viewerElementRegistry.getAll();
-    console.log("all elements are: ", quantmeElementArray);
-
-    // get the currently active activities for the process instance
-    let activeActivity = await getActiveActivities(camundaAPI, processInstanceId);
-    console.log('Currently active activities to visualize: ', activeActivity);
-
-    // if the workflow contains loops, transition activities can hold the active activity
-    if (activeActivity.length === 0) {
-        activeActivity = await getActiveTransitionActivities(camundaAPI, processInstanceId);
-    }
-    console.log('Currently active transition activities to visualize: ', activeActivity);
-
-    // visualize process token for retrieved active activities
-    activeActivity.forEach(activeActivity =>
-    visualizeActiveActivities(activeActivity['activityId'], quantmeElementRegistry, viewerElementRegistry));
-
-    await computeOverlay(camundaAPI, processInstanceId, quantmeElementArray, allElements, quantmeElementRegistry);
-    registerOverlay(quantmeElementArray, quantmeElementRegistry);
 }
 
 /**
@@ -268,7 +274,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
             }
 
             //append qprov data to variable string
-            if (quantMEType === consts.QUANTUM_CIRCUIT_EXECUTION_TASK){
+            if (quantMEType === consts.QUANTUM_CIRCUIT_EXECUTION_TASK) {
                 variableText = variableText + '<br>' + qProvText
             }
             else if (quantMEType === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS && selectedQpu !== '') {
@@ -282,7 +288,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
 
                             positionTop = positionTop - 65;
                             console.log("Top position up ", positionTop)
-                            if (variableText !== '<br/><br/>' && variableText !== '' && variableText !== '<br/>'){
+                            if (variableText !== '<br/><br/>' && variableText !== '' && variableText !== '<br/>') {
                                 qProvText = variableText + '<br>' + qProvText;
                             }
                             child.html = `<div class="djs-overlays" style="position: absolute; display: flex;" data-container-id="${child.id}">
@@ -306,7 +312,7 @@ async function computeOverlay(camundaAPI, processInstanceId, diagramElements, el
 }
 
 function taskTypeRequiresQProvQPUData(taskType) {
-    if (taskType === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS || taskType === consts.QUANTUM_CIRCUIT_EXECUTION_TASK){
+    if (taskType === consts.QUANTUM_HARDWARE_SELECTION_SUBPROCESS || taskType === consts.QUANTUM_CIRCUIT_EXECUTION_TASK) {
         return true;
     }
     return false
@@ -385,7 +391,7 @@ function registerOverlay(diagramElements, quantmeElementRegistry) {
                                         console.log(overlay)
                                         console.log(overlay.offsetHeight);
                                         // from zero go to center of wf task element, then go to top of element, then go up by overlay size and afterwards add fixed value for overlayarrow on bottom of box
-                                        let top = element.y - element.height/2 -overlay.offsetHeight - 13;
+                                        let top = element.y - element.height / 2 - overlay.offsetHeight - 13;
                                         // if(top > 0){
                                         //     top = -top;
                                         // }
@@ -763,6 +769,29 @@ async function createQuantmeModelerFromXml(xml) {
 }
 
 /**
+ * Create a new modeler object and import the given XML BPMN diagram
+ *
+ * @param xml the xml representing the BPMN diagram
+ * @return the modeler containing the BPMN diagram
+ */
+async function createPatternModelerFromXml(xml) {
+
+    // create new modeler with the custom QuantME extensions
+    const bpmnModeler = createPatternModeler();
+
+    // import the xml containing the definitions
+    function importXmlWrapper(xml) {
+        return new Promise((resolve) => {
+            bpmnModeler.importXML(xml, (successResponse) => {
+                resolve(successResponse);
+            });
+        });
+    }
+
+    await importXmlWrapper(xml);
+    return bpmnModeler;
+}
+/**
  * Create a new modeler object using the QuantME extensions
  *
  * @return {Modeler} the created modeler
@@ -771,12 +800,14 @@ function createQuantmeModeler() {
     return new BpmnModeler({
         additionalModules: [
             quantMEModule,
-            openTOSCAModule
+            openTOSCAModule,
+            patternModule
         ],
         moddleExtensions: {
             camunda: camundaModdlePackage,
             quantME: quantMEModdleExtension,
-            opentosca: openTOSCAModdleExtension
+            opentosca: openTOSCAModdleExtension,
+            pattern: patternModdleExtension
         }
     });
 }
