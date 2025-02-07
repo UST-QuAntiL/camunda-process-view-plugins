@@ -21,6 +21,9 @@ function ProcessViewButton({ camundaAPI, processInstanceId }) {
     const processViewEndpoint = `${cockpitApi}/plugin/camunda-process-views-plugin/${engine}/process-instance/${processInstanceId}`
     console.log('URL to server-side plugin: ', processViewEndpoint);
 
+    const patternView = "view-with-patterns.xml";
+    const quantumView = "view-before-rewriting.xml";
+
     // get the currently active view by retrieving the corresponding variable of the process instance
     useEffect(() => {
         fetch(
@@ -41,46 +44,13 @@ function ProcessViewButton({ camundaAPI, processInstanceId }) {
         });
     }, []);
 
-    async function openDeploymentView() {
-        const rawResponse = await fetch(`/engine-rest/process-instance/${processInstanceId}`,
-            {
-                method: 'GET',
-                headers: {
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "X-XSRF-TOKEN": camundaAPI.CSRFToken,
-                }
-            });
-        const response = await rawResponse.json();
 
-        if (!rawResponse.ok) {
-            throw new Error(`Failed to fetch process instance: ${response.message}`);
-        }
-
-        console.log('Switching to next view resulted in: ', response);
-        const definitionId = response.definitionId;
-        const splitDefinitionId = definitionId.split(':');
-        const result = splitDefinitionId[0] + '.bpmn';
-        setActivatedView(result);
-        const updateview = await fetch(processViewEndpoint + '/change-view/' + result,
-        {
-            method: 'POST', body: '{}',
-            headers: {
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-                "X-XSRF-TOKEN": camundaAPI.CSRFToken,
-            }
-        });
-        console.log('Currently activated view: ', result)
-        location.reload();
-    }
-
-    async function openDialog(activatedView) {
-        console.log('Switching from currently activated view: ', activatedView);
+    async function openView(viewName) {
+        console.log('Switching to specified view: ', viewName);
 
         // switch to next view for the process instance
-        console.log('Performing POST request at following URL to switch view: ', processViewEndpoint + '/change-view');
-        const rawResponse = await fetch(processViewEndpoint + '/change-view',
+        console.log('Performing POST request at following URL to switch view: ', processViewEndpoint + '/view');
+        const rawResponse = await fetch(processViewEndpoint + '/view/'+ viewName,
             {
                 method: 'POST', body: '{}',
                 headers: {
@@ -89,7 +59,7 @@ function ProcessViewButton({ camundaAPI, processInstanceId }) {
                     "X-XSRF-TOKEN": camundaAPI.CSRFToken,
                 }
             });
-        console.log('Switching to next view resulted in: ', rawResponse);
+        console.log('Switching to view resulted in: ', rawResponse);
         location.reload();
     }
 
@@ -105,10 +75,10 @@ function ProcessViewButton({ camundaAPI, processInstanceId }) {
 
     return (
         <>
-            <button id="pattern-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Pattern View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
+            <button id="pattern-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Pattern View" onClick={() => openView(patternView)} tooltip-placement="left">
                 <img class="process-view-button-picture" src="https://raw.githubusercontent.com/UST-QuAntiL/camunda-process-view-plugins/refs/heads/main/frontend/resources/pattern-icon.png" />
             </button>
-            <button id="quantum-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Quantum View" onClick={() => openDialog(activatedView)} tooltip-placement="left">
+            <button id="quantum-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Quantum View" onClick={() => openView(quantumView)} tooltip-placement="left">
                 <img class="process-view-button-picture" src="https://raw.githubusercontent.com/UST-QuAntiL/camunda-process-view-plugins/refs/heads/main/frontend/resources/QuantumViewIcon.svg" />
             </button>
             <button id="deployment-view-button" className="btn btn-default btn-toolbar ng-scope process-view-button" title="Toggle Deployment View" onClick={() => { triggerDeployment() }} tooltip-placement="left">
