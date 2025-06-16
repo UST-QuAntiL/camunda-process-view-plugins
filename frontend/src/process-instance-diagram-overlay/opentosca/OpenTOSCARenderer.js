@@ -1089,7 +1089,7 @@ export default class OpenTOSCARenderer {
       },
     });
 
-    if (nodeTemplate.type.includes("Ubuntu-VM_20.04")) {
+    if (nodeTemplate.type.includes("Ubuntu-VM_20.04") || nodeTemplate.type.includes("DockerContainer")) {
 
 
       //parentGfx.append(groupDef3);
